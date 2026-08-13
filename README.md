@@ -25,12 +25,12 @@ This client application is built with modern web development tools ensuring spee
 
 ---
 ## 📸 User Interface Preview
-<img width="1917" height="957" alt="Screenshot 2026-08-13 195848" src="https://github.com/user-attachments/assets/3e16d4a0-116c-4738-87b9-a3932598e988" />
-<img width="1917" height="957" alt="Screenshot 2026-08-13 195908" src="https://github.com/user-attachments/assets/907f94bc-f8dd-487a-a010-318aa4906f53" />
-<img width="1917" height="967" alt="Screenshot 2026-08-13 195924" src="https://github.com/user-attachments/assets/84e87e1f-ce5b-4ebb-b693-8f155b981cd4" />
-<img width="1917" height="967" alt="Screenshot 2026-08-13 195951" src="https://github.com/user-attachments/assets/0645f86c-cc43-408b-bb9a-bd7c753c4d8e" />
-<img width="1917" height="956" alt="Screenshot 2026-08-13 200008" src="https://github.com/user-attachments/assets/b7e5cbaa-7cb5-4b67-b377-d9fe26972161" />
-<img width="1916" height="956" alt="Screenshot 2026-08-13 200025" src="https://github.com/user-attachments/assets/e10dbef2-1db6-407b-9f34-210078c27b93" />
+<img width="1917" height="911" alt="Screenshot 2026-08-13 195848" src="https://github.com/user-attachments/assets/730facc9-035f-4330-abda-ac7b367a5078" />
+<img width="1917" height="911" alt="Screenshot 2026-08-13 195908" src="https://github.com/user-attachments/assets/f8ff9d0d-4c20-48a3-b498-698adf853318" />
+<img width="1917" height="909" alt="Screenshot 2026-08-13 195924" src="https://github.com/user-attachments/assets/c0df2d3a-455a-4aa1-8039-616794a4b0ed" />
+<img width="1917" height="905" alt="Screenshot 2026-08-13 195951" src="https://github.com/user-attachments/assets/a1fd0a40-9515-4f94-becc-a884adf33a90" />
+<img width="1917" height="904" alt="Screenshot 2026-08-13 200008" src="https://github.com/user-attachments/assets/011591c5-ae4a-4233-a175-cc4a4e05ca4a" />
+<img width="1916" height="898" alt="Screenshot 2026-08-13 200025" src="https://github.com/user-attachments/assets/a36326f9-1ab9-444f-ba06-f9ff0920b401" />
 
 
 ## Running the code
