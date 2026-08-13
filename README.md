@@ -27,6 +27,8 @@ This client application is built with modern web development tools ensuring spee
 ## 📸 User Interface Preview
 <img width="1917" height="957" alt="Screenshot 2026-08-13 195848" src="https://github.com/user-attachments/assets/3e16d4a0-116c-4738-87b9-a3932598e988" />
 <img width="1917" height="957" alt="Screenshot 2026-08-13 195908" src="https://github.com/user-attachments/assets/907f94bc-f8dd-487a-a010-318aa4906f53" />
+<img width="1917" height="967" alt="Screenshot 2026-08-13 195924" src="https://github.com/user-attachments/assets/84e87e1f-ce5b-4ebb-b693-8f155b981cd4" />
+
 
 
 ## Running the code
