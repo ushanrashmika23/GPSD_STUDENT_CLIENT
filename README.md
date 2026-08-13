@@ -28,7 +28,9 @@ This client application is built with modern web development tools ensuring spee
 <img width="1917" height="957" alt="Screenshot 2026-08-13 195848" src="https://github.com/user-attachments/assets/3e16d4a0-116c-4738-87b9-a3932598e988" />
 <img width="1917" height="957" alt="Screenshot 2026-08-13 195908" src="https://github.com/user-attachments/assets/907f94bc-f8dd-487a-a010-318aa4906f53" />
 <img width="1917" height="967" alt="Screenshot 2026-08-13 195924" src="https://github.com/user-attachments/assets/84e87e1f-ce5b-4ebb-b693-8f155b981cd4" />
-
+<img width="1917" height="967" alt="Screenshot 2026-08-13 195951" src="https://github.com/user-attachments/assets/0645f86c-cc43-408b-bb9a-bd7c753c4d8e" />
+<img width="1917" height="956" alt="Screenshot 2026-08-13 200008" src="https://github.com/user-attachments/assets/b7e5cbaa-7cb5-4b67-b377-d9fe26972161" />
+<img width="1916" height="956" alt="Screenshot 2026-08-13 200025" src="https://github.com/user-attachments/assets/e10dbef2-1db6-407b-9f34-210078c27b93" />
 
 
 ## Running the code
