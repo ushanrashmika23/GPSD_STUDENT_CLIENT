@@ -1,15 +1,13 @@
-import { motion } from "motion/react";
+import { useEffect, useState } from "react";
 import {
   ArrowUpRight,
   CalendarDays,
   FileText,
-  Flame,
   Layers,
   Medal,
   Percent,
   Pin,
   PlayCircle,
-  Quote,
   Sparkles,
   Target,
 } from "lucide-react";
@@ -20,26 +18,18 @@ import { Stagger, StaggerItem, FadeIn } from "../shared/motion";
 import { Pagination } from "../shared/pagination";
 import { cardSurface, interactiveCard, softShadow } from "../shared/surface";
 import { MaterialTypeBadge } from "../shared/material-type-badge";
+import { Button } from "../ui/button";
 import { cn } from "../ui/utils";
-import { toneFor } from "../../lib/accents";
-import { useLoading } from "../../lib/use-loading";
 import { usePagination } from "../../lib/use-pagination";
+import { notices } from "../../lib/mock-data";
 import {
-  averageMark,
-  classSize,
-  currentClass,
-  currentRank,
-  currentStudent,
-  currentUser,
-  dailyQuote,
-  formatLong,
-  latestMark,
-  lessonName,
-  materials,
-  notices,
-  studyStreak,
-  totalMaterials,
-} from "../../lib/mock-data";
+  getStudentMaterials,
+  getStudentPerformance,
+  getStudentProfile,
+  type StudentPerformance,
+  type StudentProfile,
+} from "../../lib/api";
+import { toMaterial, type MaterialRow } from "../materials/materials-page";
 import type { Material } from "../../lib/types";
 import type { PageKey } from "../layout/nav";
 
@@ -52,67 +42,131 @@ export function DashboardPage({
   onNavigate: (k: PageKey) => void;
   onOpen: (m: Material) => void;
 }) {
-  const loading = useLoading();
-  const recent = materials.slice(0, 4);
+  const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const [perf, setPerf] = useState<StudentPerformance | null>(null);
+  const [mats, setMats] = useState<MaterialRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState("");
+
+  // Dashboard data: profile (identity), performance (ranks/marks) and
+  // materials (recent feed + total count) — all three come from the
+  // student-scoped endpoints added for this portal.
+  const load = async () => {
+    setLoading(true);
+    setLoadErr("");
+    try {
+      const [p, f, m] = await Promise.all([
+        getStudentProfile(),
+        getStudentPerformance(),
+        getStudentMaterials(),
+      ]);
+      setProfile(p);
+      setPerf(f);
+      setMats(m.materials.map(toMaterial)); // already newest-first from the API
+    } catch (error: any) {
+      console.error("Dashboard load failed:", error);
+      setLoadErr(
+        error?.response?.data?.msg ??
+          error?.message ??
+          "Could not load your dashboard."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const recent = mats.slice(0, 4);
   const greeting = getGreeting();
   const noticePager = usePagination(notices, NOTICES_PER_PAGE);
+
+  const s = perf?.summary;
+  const classSize = perf?.classSize ?? 0;
+  const rankPct =
+    s?.currentRank != null && classSize > 0
+      ? Math.round((s.currentRank / classSize) * 100)
+      : null;
+  const latestPaper = perf?.papers.length
+    ? perf.papers[perf.papers.length - 1].paper_name
+    : undefined;
 
   return (
     <div className="space-y-8">
       <PageHeader
-        title={`${greeting}, ${currentUser.f_name}`}
+        title={`${greeting}, ${profile?.user.first_name ?? "there"}`}
         subtitle="Here's where you stand this term. Keep the momentum going."
       />
 
-      {/* Hero card */}
-      <FadeIn delay={0.04}>
+      {loadErr && (
         <div
           className={cn(
-            "relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground sm:p-8",
-            softShadow,
+            cardSurface,
+            "flex flex-col items-center gap-4 p-16 text-center",
           )}
         >
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,rgba(255,255,255,0.16),transparent_42%)]" />
-          <div className="absolute inset-0 opacity-[0.06] [background-image:linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] [background-size:40px_40px]" />
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-4">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs backdrop-blur">
-                <Sparkles className="size-3.5" />
-                {currentClass.class_name}
-              </span>
-              <div>
-                <p className="font-display text-2xl tracking-tight sm:text-[1.75rem]">
-                  {currentUser.f_name} {currentUser.l_name}
-                </p>
-                <p className="mt-1 text-sm text-primary-foreground/75">
-                  {currentStudent.school}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-primary-foreground/80">
-                <span className="rounded-lg bg-white/10 px-2.5 py-1 font-mono">
-                  {currentStudent.callup_no}
-                </span>
-              </div>
-            </div>
+          <p className="text-sm text-destructive">{loadErr}</p>
+          <Button variant="outline" onClick={load} className="rounded-xl">
+            Try again
+          </Button>
+        </div>
+      )}
 
-            <div className="grid grid-cols-2 gap-3 sm:max-w-xs sm:grid-cols-2">
-              <HeroStat
-                label="Current rank"
-                value={`#${currentRank}`}
-                caption={`of ${classSize}`}
-              />
-              <HeroStat
-                label="Average mark"
-                value={`${averageMark}`}
-                caption="out of 100"
-              />
+      {/* Hero card */}
+      {loading ? (
+        <div className={cn(cardSurface, "h-44 animate-pulse rounded-2xl")} />
+      ) : !loadErr && profile ? (
+        <FadeIn delay={0.04}>
+          <div
+            className={cn(
+              "relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground sm:p-8",
+              softShadow,
+            )}
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,rgba(255,255,255,0.16),transparent_42%)]" />
+            <div className="absolute inset-0 opacity-[0.06] [background-image:linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] [background-size:40px_40px]" />
+            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="space-y-4">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs backdrop-blur">
+                  <Sparkles className="size-3.5" />
+                  {profile.batch.name}
+                </span>
+                <div>
+                  <p className="font-display text-2xl tracking-tight sm:text-[1.75rem]">
+                    {profile.user.first_name} {profile.user.last_name}
+                  </p>
+                  <p className="mt-1 text-sm text-primary-foreground/75">
+                    {profile.school}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-primary-foreground/80">
+                  <span className="rounded-lg bg-white/10 px-2.5 py-1 font-mono">
+                    {profile.call_up_no}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:max-w-xs sm:grid-cols-2">
+                <HeroStat
+                  label="Current rank"
+                  value={`#${s?.currentRank ?? "—"}`}
+                  caption={`of ${classSize}`}
+                />
+                <HeroStat
+                  label="Average mark"
+                  value={`${s?.averageMark ?? "—"}`}
+                  caption="out of 100"
+                />
+              </div>
             </div>
           </div>
-        </div>
-      </FadeIn>
+        </FadeIn>
+      ) : null}
 
       {/* Inspirational strip */}
-      <FadeIn delay={0.06}>
+    {/*  <FadeIn delay={0.06}>
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="relative overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-5">
             <div className="flex items-center gap-3">
@@ -137,7 +191,7 @@ export function DashboardPage({
             </p>
           </div>
         </div>
-      </FadeIn>
+      </FadeIn>*}
 
       {/* Quick stats */}
       <section>
@@ -147,47 +201,44 @@ export function DashboardPage({
               <StatCardSkeleton key={i} />
             ))}
           </div>
-        ) : (
+        ) : !loadErr ? (
           <Stagger className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard
               label="Current Rank"
-              value={`#${currentRank}`}
+              value={`#${s?.currentRank ?? "—"}`}
               icon={Medal}
               tone="indigo"
-              trend={{ value: "+3", positive: true }}
-              hint={`Top ${Math.round((currentRank / classSize) * 100)}% of class`}
+              hint={rankPct != null ? `Top ${rankPct}% of class` : undefined}
             />
             <StatCard
               label="Average Mark"
-              value={averageMark}
+              value={s?.averageMark ?? "—"}
               suffix="/ 100"
               icon={Percent}
               tone="violet"
-              trend={{ value: "+6%", positive: true }}
             />
             <StatCard
               label="Latest Mark"
-              value={latestMark}
+              value={s?.latestMark ?? "—"}
               suffix="/ 100"
               icon={Target}
               tone="emerald"
-              trend={{ value: "+5", positive: true }}
-              hint="Integration test"
+              hint={latestPaper}
             />
             <StatCard
               label="Total Materials"
-              value={totalMaterials}
+              value={mats.length}
               icon={Layers}
               tone="sky"
               hint="Available to you"
             />
           </Stagger>
-        )}
+        ) : null}
       </section>
 
       {/* Notice board + recent materials */}
       <div className="grid gap-6 lg:grid-cols-5">
-        {/* Notice board — most important */}
+        {/* Notice board — most important (still mock; wired up later) */}
         <section className="space-y-4 lg:col-span-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg tracking-tight">Notice Board</h2>
@@ -261,65 +312,76 @@ export function DashboardPage({
           )}
         </section>
 
-        {/* Recent materials */}
-        <section className="space-y-4 lg:col-span-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg tracking-tight">Recent Materials</h2>
-            <button
-              onClick={() => onNavigate("materials")}
-              className="inline-flex items-center gap-0.5 text-sm text-primary transition-opacity hover:opacity-70"
-            >
-              View all
-              <ArrowUpRight className="size-4" />
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <ListRowSkeleton key={i} />
-              ))}
+        {/* Recent materials — real data from the student materials endpoint */}
+        {!loadErr && (
+          <section className="space-y-4 lg:col-span-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg tracking-tight">Recent Materials</h2>
+              <button
+                onClick={() => onNavigate("materials")}
+                className="inline-flex items-center gap-0.5 text-sm text-primary transition-opacity hover:opacity-70"
+              >
+                View all
+                <ArrowUpRight className="size-4" />
+              </button>
             </div>
-          ) : (
-            <Stagger className="space-y-3">
-              {recent.map((m) => (
-                <StaggerItem key={m.material_id}>
-                  <button
-                    onClick={() => onOpen(m)}
-                    className={cn(
-                      interactiveCard,
-                      "flex w-full items-center gap-3.5 p-4 text-left",
-                    )}
-                  >
-                    <div
+
+            {loading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <ListRowSkeleton key={i} />
+                ))}
+              </div>
+            ) : recent.length === 0 ? (
+              <div
+                className={cn(
+                  cardSurface,
+                  "p-8 text-center text-sm text-muted-foreground",
+                )}
+              >
+                No materials shared with your class yet.
+              </div>
+            ) : (
+              <Stagger className="space-y-3">
+                {recent.map((m) => (
+                  <StaggerItem key={m.material_id}>
+                    <button
+                      onClick={() => onOpen(m)}
                       className={cn(
-                        "flex size-10 shrink-0 items-center justify-center rounded-xl",
-                        m.type === "PDF"
-                          ? "bg-accent text-primary"
-                          : "bg-success/10 text-success",
+                        interactiveCard,
+                        "flex w-full items-center gap-3.5 p-4 text-left",
                       )}
                     >
-                      {m.type === "PDF" ? (
-                        <FileText className="size-[18px]" />
-                      ) : (
-                        <PlayCircle className="size-[18px]" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm tracking-tight text-foreground">
-                        {m.material_name}
-                      </p>
-                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                        {lessonName(m.lesson_id)} · {formatLong(m.date_added)}
-                      </p>
-                    </div>
-                    <MaterialTypeBadge type={m.type} />
-                  </button>
-                </StaggerItem>
-              ))}
-            </Stagger>
-          )}
-        </section>
+                      <div
+                        className={cn(
+                          "flex size-10 shrink-0 items-center justify-center rounded-xl",
+                          m.type === "PDF"
+                            ? "bg-accent text-primary"
+                            : "bg-success/10 text-success",
+                        )}
+                      >
+                        {m.type === "PDF" ? (
+                          <FileText className="size-[18px]" />
+                        ) : (
+                          <PlayCircle className="size-[18px]" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm tracking-tight text-foreground">
+                          {m.material_name}
+                        </p>
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                          {m.lesson_title} · {formatLong(m.date_added)}
+                        </p>
+                      </div>
+                      <MaterialTypeBadge type={m.type} />
+                    </button>
+                  </StaggerItem>
+                ))}
+              </Stagger>
+            )}
+          </section>
+        )}
       </div>
     </div>
   );
@@ -349,3 +411,11 @@ function getGreeting() {
   if (h < 17) return "Good afternoon";
   return "Good evening";
 }
+
+// e.g. 2026-03-12T00:00:00.000Z → "12 Mar 2026"
+const formatLong = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });

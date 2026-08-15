@@ -36,7 +36,7 @@ export function AppShell({
           <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Sigma className="size-[18px]" strokeWidth={2.2} />
           </div>
-          <span className="font-display tracking-tight">AxiomMaths</span>
+          <span className="font-display tracking-tight">ComMaths</span>
         </div>
         <button
           aria-label="Notifications"

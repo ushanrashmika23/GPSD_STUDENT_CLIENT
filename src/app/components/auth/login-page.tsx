@@ -1,6 +1,17 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { motion } from "motion/react";
 import { ArrowRight, Eye, EyeOff, Loader2, Sigma } from "lucide-react";
+import {
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  linkWithCredential,
+  fetchSignInMethodsForEmail,
+  GoogleAuthProvider,
+  type AuthCredential,
+} from "firebase/auth";
+import { toast } from "sonner";
+import { auth, googleProvider } from "../../lib/firebase";
+import { firebaseLogin, type LoginResult } from "../../lib/api";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
@@ -9,17 +20,144 @@ import { cn } from "../ui/utils";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
+// Friendly messages for common auth failures
+const friendlyAuthError = (error: any): string => {
+  // Backend rejection — e.g. the Google account isn't linked to a student record
+  const status = error?.response?.status;
+  if (status === 404) {
+    return "This Google account isn't registered with the institute yet. Please contact the institute office to register.";
+  }
+  const backendMsg = error?.response?.data?.msg;
+  if (backendMsg) return backendMsg;
+
+  switch (error?.code) {
+    case "auth/wrong-password":
+    case "auth/invalid-credential":
+      return "Incorrect email or password.";
+    case "auth/user-not-found":
+      return "No account found with this email.";
+    case "auth/invalid-email":
+      return "Please enter a valid email address.";
+    case "auth/too-many-requests":
+      return "Too many attempts. Please try again later.";
+    case "auth/network-request-failed":
+      return "Network error. Please check your connection.";
+    case "auth/popup-blocked":
+      return "Your browser blocked the sign-in window. Allow popups for this site and try again.";
+    case "auth/popup-closed-by-user":
+      return "Sign-in window closed before completing.";
+    case "auth/cancelled-popup-request":
+      return "Sign-in was cancelled. Please try again.";
+    case "auth/unauthorized-domain":
+      return "This site is not authorized for Firebase sign-in. Please contact the institute office.";
+    case "auth/operation-not-allowed":
+      return "Google sign-in is not enabled. Please contact the institute office.";
+    case "auth/account-exists-with-different-credential":
+      return "An account with this email already exists. Sign in with your email & password below — your Google account will be linked automatically.";
+    default:
+      return error?.message ?? "Login failed";
+  }
+};
+
 export function LoginPage({ onLogin }: { onLogin: () => void }) {
-  const [email, setEmail] = useState("sahan.w@gmail.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
 
-  function submit(e: FormEvent) {
+  // When Google sign-in is blocked because a password account with the same
+  // email exists, keep the Google credential and link it after password login.
+  const pendingGoogleCred = useRef<AuthCredential | null>(null);
+
+  // Backend JWT exchange → persist session → enter the app.
+  // No refresh token — one long-lived JWT kept in localStorage.
+  const finishLogin = (res: LoginResult) => {
+    if (!res?.success || !res.data?.token) {
+      setErr(res?.msg ?? "Login failed");
+      return;
+    }
+    localStorage.setItem("token", res.data.token);
+    localStorage.setItem("user", JSON.stringify(res.data.user));
+
+    const user = res.data.user;
+    const name = user ? `${user.first_name} ${user.last_name}`.trim() : "";
+    toast.success(name ? `Welcome back, ${name}` : "Welcome back!");
+    onLogin();
+  };
+
+  // Email + password login
+  async function submit(e: FormEvent) {
     e.preventDefault();
+    setErr("");
     setLoading(true);
-    // Mock auth — replace with real authentication call.
-    setTimeout(onLogin, 850);
+    try {
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
+
+      // Link a Google credential blocked earlier, so Google login works next time
+      if (pendingGoogleCred.current) {
+        try {
+          await linkWithCredential(userCred.user, pendingGoogleCred.current);
+          console.log("Linked Google account to existing password account.");
+        } catch (linkErr: any) {
+          console.warn("Google account linking skipped:", linkErr?.code ?? linkErr);
+        }
+        pendingGoogleCred.current = null;
+      }
+
+      const idToken = await userCred.user.getIdToken();
+      finishLogin(await firebaseLogin(idToken));
+    } catch (error: any) {
+      console.error("Password login failed:", error);
+      setErr(friendlyAuthError(error));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Google login
+  async function googleLogin() {
+    setErr("");
+    setLoading(true);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log("Google sign-in response:", result);
+
+      // Debug: the raw Google OAuth credential (its idToken is a Google token,
+      // NOT what the backend verifies)
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential) console.log("Google OAuth credential:", credential);
+
+      // The backend verifies a Firebase Auth ID token, so take it from the
+      // signed-in user. No refresh token — just this single access token.
+      const idToken = await result.user.getIdToken();
+      finishLogin(await firebaseLogin(idToken));
+    } catch (error: any) {
+      console.error("Google sign-in failed:", error);
+      const credential = GoogleAuthProvider.credentialFromError(error);
+      if (credential) console.log("Google credential from error:", credential);
+
+      // Email already registered with a password — stash the credential,
+      // prefill the form and point the user at the password login.
+      if (error?.code === "auth/account-exists-with-different-credential") {
+        pendingGoogleCred.current = credential ?? null;
+        const accountEmail: string | undefined =
+          error?.customData?.email || error?.email;
+        if (typeof accountEmail === "string" && accountEmail) {
+          setEmail(accountEmail);
+          try {
+            const methods = await fetchSignInMethodsForEmail(auth, accountEmail);
+            console.log("Sign-in methods for", accountEmail, ":", methods);
+          } catch (methodsErr) {
+            console.warn("Could not fetch sign-in methods:", methodsErr);
+          }
+        }
+      }
+
+      setErr(friendlyAuthError(error));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -34,7 +172,7 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
             <div className="flex size-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
               <Sigma className="size-5" strokeWidth={2.2} />
             </div>
-            <span className="font-display text-lg tracking-tight">AxiomMaths</span>
+            <span className="font-display text-lg tracking-tight">CombinedMaths</span>
           </div>
 
           <motion.div
@@ -65,7 +203,7 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
           </motion.div>
 
           <p className="text-xs text-primary-foreground/60">
-            © 2026 AxiomMaths Institute · Maharagama
+            © 2026 ComMaths Institute · Kaluthara | Mathugama | Horana
           </p>
         </div>
       </div>
@@ -140,6 +278,12 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
               </div>
             </div>
 
+            {err && (
+              <p className="rounded-xl bg-destructive/10 px-3 py-2.5 text-xs leading-relaxed text-destructive">
+                {err}
+              </p>
+            )}
+
             <Button
               type="submit"
               disabled={loading}
@@ -166,14 +310,15 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
           <Button
             type="button"
             variant="outline"
-            onClick={() => {
-              setLoading(true);
-              setTimeout(onLogin, 850);
-            }}
+            onClick={googleLogin}
             disabled={loading}
             className="h-11 w-full rounded-xl"
           >
-            <GoogleIcon />
+            {loading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <GoogleIcon />
+            )}
             Sign in with Google
           </Button>
 

@@ -10,7 +10,7 @@ import {
   Target,
   TrendingUp,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -30,28 +30,84 @@ import { Pagination } from "../shared/pagination";
 import { EmptyState } from "../shared/empty-state";
 import { cardSurface } from "../shared/surface";
 import { Input } from "../ui/input";
+import { Button } from "../ui/button";
 import { cn } from "../ui/utils";
 import { toneFor } from "../../lib/accents";
-import { useLoading } from "../../lib/use-loading";
 import { usePagination } from "../../lib/use-pagination";
-import {
-  averageMark,
-  bestRank,
-  classSize,
-  currentRank,
-  formatLong,
-  latestMark,
-  lessons,
-  markSeries,
-  rankSeries,
-  results,
-} from "../../lib/mock-data";
+import { getStudentPerformance, type StudentPerformance } from "../../lib/api";
 
 const RESULTS_PER_PAGE = 5;
 
 export function PerformancePage() {
-  const loading = useLoading(700);
+  const [perf, setPerf] = useState<StudentPerformance | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState("");
   const [query, setQuery] = useState("");
+
+  // GET /api/marks/student-performance/:userId (userId from the stored login user)
+  const load = async () => {
+    setLoading(true);
+    setLoadErr("");
+    try {
+      setPerf(await getStudentPerformance());
+    } catch (error: any) {
+      console.error("Performance load failed:", error);
+      setLoadErr(
+        error?.response?.data?.msg ??
+          error?.message ??
+          "Could not load your performance data."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const papers = perf?.papers ?? [];
+
+  // Chart rows — backend returns papers oldest → newest already
+  const markSeries = useMemo(
+    () =>
+      papers.map((p) => ({
+        label: shortDate(p.paper_date),
+        mark: p.mark,
+        classAvg: p.class_avg,
+      })),
+    [papers],
+  );
+
+  const rankSeries = useMemo(
+    () =>
+      papers.map((p) => ({
+        label: shortDate(p.paper_date),
+        rank: p.rank ?? 0,
+      })),
+    [papers],
+  );
+
+  // Results list — newest first
+  const results = useMemo(
+    () =>
+      [...papers]
+        .sort(
+          (a, b) =>
+            new Date(b.paper_date).getTime() - new Date(a.paper_date).getTime(),
+        )
+        .map((p) => ({
+          material_id: p.paper_id,
+          test_name: p.paper_name,
+          lesson_name: p.lesson_title,
+          lesson_id: p.lesson_id ?? "",
+          date: p.paper_date,
+          mark: p.mark,
+          rank: p.rank ?? 0,
+          comments: p.comments,
+        })),
+    [papers],
+  );
 
   const filteredResults = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -62,13 +118,15 @@ export function PerformancePage() {
         r.lesson_name.toLowerCase().includes(q) ||
         r.comments.toLowerCase().includes(q),
     );
-  }, [query]);
+  }, [query, results]);
 
   const { page, setPage, pageCount, pageItems, from, to, total } = usePagination(
     filteredResults,
     RESULTS_PER_PAGE,
     [query],
   );
+
+  const s = perf?.summary;
 
   return (
     <div className="space-y-8">
@@ -77,57 +135,64 @@ export function PerformancePage() {
         subtitle="Track your marks and class rank across every graded test this term."
       />
 
-      {/* Summary cards */}
-      {loading ? (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <StatCardSkeleton key={i} />
-          ))}
+      {loadErr && (
+        <div
+          className={cn(
+            cardSurface,
+            "flex flex-col items-center gap-4 p-16 text-center",
+          )}
+        >
+          <p className="text-sm text-destructive">{loadErr}</p>
+          <Button variant="outline" onClick={load} className="rounded-xl">
+            Try again
+          </Button>
         </div>
-      ) : (
-        <Stagger className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard
-            label="Current Rank"
-            value={`#${currentRank}`}
-            icon={Medal}
-            tone="indigo"
-            hint={`of ${classSize} students`}
-          />
-          <StatCard
-            label="Best Rank"
-            value={`#${bestRank}`}
-            icon={Crown}
-            tone="amber"
-            hint="Personal best"
-          />
-          <StatCard
-            label="Average Mark"
-            value={averageMark}
-            suffix="/ 100"
-            icon={Percent}
-            tone="violet"
-            trend={{ value: "+6%", positive: true }}
-          />
-          <StatCard
-            label="Latest Mark"
-            value={latestMark}
-            suffix="/ 100"
-            icon={Target}
-            tone="emerald"
-            trend={{ value: "+5", positive: true }}
-          />
-        </Stagger>
       )}
 
-      {/* Charts */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {loading ? (
-          <>
-            <ChartSkeleton />
-            <ChartSkeleton />
-          </>
-        ) : (
-          <>
+      {!loadErr && !loading && papers.length === 0 && (
+        <EmptyState
+          icon={Award}
+          title="No results published yet"
+          description="Your marks will appear here once the institute releases your first test results."
+        />
+      )}
+
+      {!loadErr && !loading && papers.length > 0 && (
+        <>
+          {/* Summary cards */}
+          <Stagger className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatCard
+              label="Current Rank"
+              value={`#${s?.currentRank ?? "—"}`}
+              icon={Medal}
+              tone="indigo"
+              hint={`of ${perf?.classSize ?? 0} students`}
+            />
+            <StatCard
+              label="Best Rank"
+              value={`#${s?.bestRank ?? "—"}`}
+              icon={Crown}
+              tone="amber"
+              hint="Personal best"
+            />
+            <StatCard
+              label="Average Mark"
+              value={s?.averageMark ?? "—"}
+              suffix="/ 100"
+              icon={Percent}
+              tone="violet"
+            />
+            <StatCard
+              label="Latest Mark"
+              value={s?.latestMark ?? "—"}
+              suffix="/ 100"
+              icon={Target}
+              tone="emerald"
+            />
+          </Stagger>
+
+          {/* Charts */}
+          <div className="grid gap-6 lg:grid-cols-2">
             <FadeIn delay={0.04}>
               <ChartCard
                 title="Marks Progress"
@@ -164,7 +229,7 @@ export function PerformancePage() {
                       dy={8}
                     />
                     <YAxis
-                      domain={[40, 100]}
+                      domain={[0, 100]}
                       tickLine={false}
                       axisLine={false}
                       tick={axisTick}
@@ -246,73 +311,99 @@ export function PerformancePage() {
                 </ResponsiveContainer>
               </ChartCard>
             </FadeIn>
-          </>
-        )}
-      </div>
-
-      {/* Results history */}
-      <section className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg tracking-tight">Results History</h2>
-          <div className="relative sm:w-72">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search tests or feedback…"
-              className="h-11 rounded-xl pl-11"
-            />
           </div>
-        </div>
 
-        {loading ? (
+          {/* Results history */}
+          <section className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-lg tracking-tight">Results History</h2>
+              <div className="relative sm:w-72">
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search tests or feedback…"
+                  className="h-11 rounded-xl pl-11"
+                />
+              </div>
+            </div>
+
+            {filteredResults.length === 0 ? (
+              <EmptyState
+                icon={SearchX}
+                title="No results found"
+                description="No graded tests match your search. Try a different test name, lesson or keyword."
+              />
+            ) : (
+              <div className="space-y-4">
+                <Stagger className="space-y-3">
+                  {pageItems.map((r) => (
+                    <StaggerItem key={r.material_id}>
+                      <ResultCard
+                        testName={r.test_name}
+                        lesson={r.lesson_name}
+                        lessonId={r.lesson_id}
+                        date={r.date}
+                        mark={r.mark}
+                        rank={r.rank}
+                        comments={r.comments}
+                      />
+                    </StaggerItem>
+                  ))}
+                </Stagger>
+
+                <Pagination
+                  page={page}
+                  pageCount={pageCount}
+                  onChange={setPage}
+                  from={from}
+                  to={to}
+                  total={total}
+                  label="results"
+                />
+              </div>
+            )}
+          </section>
+        </>
+      )}
+
+      {/* Loading skeletons (also covers the initial fetch) */}
+      {loading && (
+        <>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <StatCardSkeleton key={i} />
+            ))}
+          </div>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <ChartSkeleton />
+            <ChartSkeleton />
+          </div>
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <ListRowSkeleton key={i} />
             ))}
           </div>
-        ) : filteredResults.length === 0 ? (
-          <EmptyState
-            icon={SearchX}
-            title="No results found"
-            description="No graded tests match your search. Try a different test name, lesson or keyword."
-          />
-        ) : (
-          <div className="space-y-4">
-            <Stagger className="space-y-3">
-              {pageItems.map((r) => (
-                <StaggerItem key={r.material_id}>
-                  <ResultCard
-                    testName={r.test_name}
-                    lesson={r.lesson_name}
-                    lessonId={lessonIdFor(r.lesson_name)}
-                    date={r.date}
-                    mark={r.mark}
-                    rank={r.rank}
-                    comments={r.comments}
-                  />
-                </StaggerItem>
-              ))}
-            </Stagger>
-
-            <Pagination
-              page={page}
-              pageCount={pageCount}
-              onChange={setPage}
-              from={from}
-              to={to}
-              total={total}
-              label="results"
-            />
-          </div>
-        )}
-      </section>
+        </>
+      )}
     </div>
   );
 }
 
-const lessonIdFor = (name: string) =>
-  lessons.find((l) => l.lesson_name === name)?.lesson_id ?? "l_01";
+// e.g. 2026-03-12T00:00:00.000Z → "12 Mar 2026"
+const formatLong = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
+// e.g. 2026-03-12T00:00:00.000Z → "12 Mar" (chart axis label)
+const shortDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+  });
 
 const axisTick = { fill: "#64748b", fontSize: 12, fontFamily: "JetBrains Mono" };
 

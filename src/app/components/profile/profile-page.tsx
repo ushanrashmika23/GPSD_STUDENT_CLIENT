@@ -1,8 +1,8 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   AtSign,
   Check,
-  CreditCard,
+  Clock,
   GraduationCap,
   Hash,
   Home,
@@ -15,7 +15,14 @@ import {
   School,
   User as UserIcon,
 } from "lucide-react";
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+} from "firebase/auth";
 import { toast } from "sonner";
+import { auth } from "../../lib/firebase";
+import { getStudentProfile, type StudentProfile } from "../../lib/api";
 import { PageHeader } from "../shared/page-header";
 import { FadeIn } from "../shared/motion";
 import { cardSurface } from "../shared/surface";
@@ -23,23 +30,87 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
 import { cn } from "../ui/utils";
-import {
-  currentClass,
-  currentStudent,
-  currentUser,
-} from "../../lib/mock-data";
 
 export function ProfilePage({ onLogout }: { onLogout: () => void }) {
+  const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState("");
+
+  // GET /api/students/profile/:userId (userId from the stored login user)
+  const load = async () => {
+    setLoading(true);
+    setLoadErr("");
+    try {
+      setProfile(await getStudentProfile());
+    } catch (error: any) {
+      console.error("Profile load failed:", error);
+      setLoadErr(
+        error?.response?.data?.msg ??
+          error?.message ??
+          "Could not load your profile."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <PageHeader
+          title="Profile"
+          subtitle="Your account details and security settings."
+        />
+        <div className={cn(cardSurface, "flex items-center justify-center p-16")}>
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="space-y-8">
+        <PageHeader
+          title="Profile"
+          subtitle="Your account details and security settings."
+        />
+        <div
+          className={cn(
+            cardSurface,
+            "flex flex-col items-center gap-4 p-16 text-center"
+          )}
+        >
+          <p className="text-sm text-destructive">
+            {loadErr || "Could not load your profile."}
+          </p>
+          <Button variant="outline" onClick={load} className="rounded-xl">
+            Try again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const u = profile.user;
   const fields: { icon: LucideIcon; label: string; value: string; mono?: boolean }[] = [
-    { icon: UserIcon, label: "First Name", value: currentUser.f_name },
-    { icon: UserIcon, label: "Last Name", value: currentUser.l_name },
-    { icon: Mail, label: "Email", value: currentUser.email },
-    { icon: Phone, label: "Mobile", value: currentUser.mobile, mono: true },
-    { icon: CreditCard, label: "NIC", value: currentUser.nic, mono: true },
-    { icon: Home, label: "Address", value: currentUser.address },
-    { icon: School, label: "School", value: currentStudent.school },
-    { icon: Hash, label: "Callup Number", value: currentStudent.callup_no, mono: true },
-    { icon: GraduationCap, label: "Class", value: currentClass.class_name },
+    { icon: UserIcon, label: "First Name", value: u.first_name },
+    { icon: UserIcon, label: "Last Name", value: u.last_name },
+    { icon: Mail, label: "Email", value: u.email },
+    { icon: Phone, label: "Mobile", value: u.mobile, mono: true },
+    { icon: Home, label: "Address", value: u.address },
+    { icon: School, label: "School", value: profile.school },
+    { icon: Hash, label: "Callup Number", value: profile.call_up_no, mono: true },
+    { icon: GraduationCap, label: "Class", value: profile.batch.name },
+    {
+      icon: Clock,
+      label: "Class Schedule",
+      value: `${profile.batch.day} · ${profile.batch.start_time} – ${profile.batch.end_time}`,
+    },
   ];
 
   return (
@@ -53,24 +124,24 @@ export function ProfilePage({ onLogout }: { onLogout: () => void }) {
       <FadeIn>
         <div className={cn(cardSurface, "flex flex-col items-center gap-4 p-6 sm:flex-row sm:items-center sm:gap-5")}>
           <div className="flex size-16 items-center justify-center rounded-2xl bg-primary font-mono text-xl text-primary-foreground">
-            {currentUser.f_name[0]}
-            {currentUser.l_name[0]}
+            {u.first_name[0]}
+            {u.last_name[0]}
           </div>
           <div className="text-center sm:text-left">
             <p className="font-display text-xl tracking-tight">
-              {currentUser.f_name} {currentUser.l_name}
+              {u.first_name} {u.last_name}
             </p>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              {currentUser.email}
+              {u.email}
             </p>
             <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-1 text-xs text-accent-foreground">
                 <Hash className="size-3.5" />
-                {currentStudent.callup_no}
+                {profile.call_up_no}
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs text-foreground">
                 <GraduationCap className="size-3.5" />
-                {currentClass.class_name}
+                {profile.batch.name}
               </span>
             </div>
           </div>
@@ -130,31 +201,69 @@ export function ProfilePage({ onLogout }: { onLogout: () => void }) {
   );
 }
 
+// Friendly messages for password-change failures
+const friendlyPasswordError = (error: any): string => {
+  switch (error?.code) {
+    case "auth/wrong-password":
+    case "auth/invalid-credential":
+      return "Your current password is incorrect.";
+    case "auth/weak-password":
+      return "New password is too weak. Use at least 8 characters.";
+    case "auth/too-many-requests":
+      return "Too many attempts. Please try again later.";
+    case "auth/requires-recent-login":
+      return "Please sign in again and retry.";
+    case "auth/network-request-failed":
+      return "Network error. Please check your connection.";
+    default:
+      return error?.message ?? "Failed to update password.";
+  }
+};
+
 function ChangePasswordCard() {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
   const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
 
   const mismatch = confirm.length > 0 && next !== confirm;
   const tooShort = next.length > 0 && next.length < 8;
   const valid =
     current.length > 0 && next.length >= 8 && next === confirm;
 
-  function submit(e: FormEvent) {
+  // No backend endpoint needed here: Firebase client-side re-auth verifies the
+  // CURRENT password (the Admin SDK cannot), then updates it directly.
+  async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!valid) return;
+    if (!valid || saving) return;
     setSaving(true);
-    // Mock — replace with real password-change request.
-    setTimeout(() => {
-      setSaving(false);
+    setErr("");
+    try {
+      const fbUser = auth.currentUser;
+      if (!fbUser || !fbUser.email) {
+        setErr("Your session has expired. Please sign out and sign in again.");
+        return;
+      }
+
+      // 1. Re-authenticate with the current password (verifies it)
+      const cred = EmailAuthProvider.credential(fbUser.email, current);
+      await reauthenticateWithCredential(fbUser, cred);
+      // 2. Set the new password
+      await updatePassword(fbUser, next);
+
       setCurrent("");
       setNext("");
       setConfirm("");
       toast.success("Password updated", {
         description: "Your password has been changed successfully.",
       });
-    }, 900);
+    } catch (error: any) {
+      console.error("Password change failed:", error);
+      setErr(friendlyPasswordError(error));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -193,6 +302,12 @@ function ChangePasswordCard() {
           error={mismatch ? "Passwords do not match" : undefined}
         />
       </div>
+
+      {err && (
+        <p className="mt-4 rounded-xl bg-destructive/10 px-3 py-2.5 text-xs leading-relaxed text-destructive">
+          {err}
+        </p>
+      )}
 
       <Button
         type="submit"

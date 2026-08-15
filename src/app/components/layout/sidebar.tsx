@@ -1,8 +1,24 @@
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { LogOut, PanelLeftClose, PanelLeftOpen, Sigma } from "lucide-react";
 import { cn } from "../ui/utils";
 import { navItems, type PageKey } from "./nav";
-import { currentStudent, currentUser } from "../../lib/mock-data";
+import { getStudentProfile, type StudentProfile } from "../../lib/api";
+
+// The logged-in user stored at login (names/email…) — read synchronously so the
+// sidebar fills instantly; the profile API adds the call-up number afterwards.
+const storedUser = (): {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+} | null => {
+  try {
+    const raw = localStorage.getItem("user");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
 
 export function Sidebar({
   active,
@@ -17,6 +33,22 @@ export function Sidebar({
   collapsed: boolean;
   onToggleCollapse: () => void;
 }) {
+  const stored = storedUser();
+  const [profile, setProfile] = useState<StudentProfile | null>(null);
+
+  // GET /api/students/profile/:userId — fills the call-up number under the name
+  useEffect(() => {
+    getStudentProfile()
+      .then(setProfile)
+      .catch((e) => console.error("Sidebar profile fetch failed:", e));
+  }, []);
+
+  const firstName = stored?.first_name ?? profile?.user.first_name ?? "Student";
+  const lastName = stored?.last_name ?? profile?.user.last_name ?? "";
+  const email = stored?.email ?? profile?.user.email ?? "";
+  // Call-up number once the profile resolves; email as the instant fallback
+  const subline = profile?.call_up_no ?? email;
+
   return (
     <motion.aside
       animate={{ width: collapsed ? 80 : 260 }}
@@ -98,7 +130,7 @@ export function Sidebar({
         })}
       </nav>
 
-      {/* Footer / user */}
+      {/* Footer / user — real details from the login + profile API */}
       <div className="mt-auto px-3">
         <div
           className={cn(
@@ -107,17 +139,17 @@ export function Sidebar({
           )}
         >
           <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-sm text-primary">
-            {currentUser.f_name[0]}
-            {currentUser.l_name[0]}
+            {firstName[0] ?? ""}
+            {lastName[0] ?? ""}
           </div>
           {!collapsed && (
             <>
               <div className="min-w-0 leading-tight">
                 <p className="truncate text-sm text-foreground">
-                  {currentUser.f_name} {currentUser.l_name}
+                  {firstName} {lastName}
                 </p>
                 <p className="truncate font-mono text-xs text-muted-foreground">
-                  {currentStudent.callup_no}
+                  {subline}
                 </p>
               </div>
               <button

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { Loader2 } from "lucide-react";
 import { Toaster } from "./components/ui/sonner";
 import { LoginPage } from "./components/auth/login-page";
 import { AppShell } from "./components/layout/app-shell";
@@ -9,6 +10,7 @@ import { PerformancePage } from "./components/performance/performance-page";
 import { ProfilePage } from "./components/profile/profile-page";
 import { PdfViewerPage } from "./components/viewer/pdf-viewer-page";
 import { VideoPlayerPage } from "./components/viewer/video-player-page";
+import { autoLogin } from "./lib/api";
 import type { PageKey } from "./components/layout/nav";
 import type { Material } from "./lib/types";
 
@@ -19,8 +21,42 @@ interface ViewerState {
 
 export default function App() {
   const [authed, setAuthed] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
   const [page, setPage] = useState<PageKey>("dashboard");
   const [viewer, setViewer] = useState<ViewerState | null>(null);
+
+  // Autologin: restore the session from the JWT in localStorage on load
+  useEffect(() => {
+    const restoreSession = async () => {
+      if (!localStorage.getItem("token")) {
+        setAuthLoading(false);
+        return;
+      }
+      try {
+        const res = await autoLogin();
+        if (res?.success) {
+          setAuthed(true);
+        } else {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+        }
+      } catch {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+    restoreSession();
+  }, []);
+
+  const logout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setAuthed(false);
+    setPage("dashboard");
+    setViewer(null);
+  };
 
   const scrollTop = () => {
     if (typeof window !== "undefined") window.scrollTo({ top: 0 });
@@ -47,6 +83,14 @@ export default function App() {
     ? `viewer-${viewer.type}-${viewer.material.material_id}`
     : page;
 
+  if (authLoading) {
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-background">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <>
       <AnimatePresence mode="wait">
@@ -61,11 +105,7 @@ export default function App() {
               active={page}
               contentKey={contentKey}
               onNavigate={navigate}
-              onLogout={() => {
-                setAuthed(false);
-                setPage("dashboard");
-                setViewer(null);
-              }}
+              onLogout={logout}
             >
               {viewer ? (
                 viewer.type === "pdf" ? (
@@ -85,7 +125,7 @@ export default function App() {
                   {page === "materials" && <MaterialsPage onOpen={openMaterial} />}
                   {page === "performance" && <PerformancePage />}
                   {page === "profile" && (
-                    <ProfilePage onLogout={() => setAuthed(false)} />
+                    <ProfilePage onLogout={logout} />
                   )}
                 </>
               )}
