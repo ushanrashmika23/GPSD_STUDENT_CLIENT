@@ -97,19 +97,25 @@ export function ProfilePage({ onLogout }: { onLogout: () => void }) {
   }
 
   const u = profile.user;
+  // Fallbacks ("—") guard against incomplete records from the backend
+  const batch = profile.batch;
   const fields: { icon: LucideIcon; label: string; value: string; mono?: boolean }[] = [
-    { icon: UserIcon, label: "First Name", value: u.first_name },
-    { icon: UserIcon, label: "Last Name", value: u.last_name },
-    { icon: Mail, label: "Email", value: u.email },
-    { icon: Phone, label: "Mobile", value: u.mobile, mono: true },
-    { icon: Home, label: "Address", value: u.address },
-    { icon: School, label: "School", value: profile.school },
-    { icon: Hash, label: "Callup Number", value: profile.call_up_no, mono: true },
-    { icon: GraduationCap, label: "Class", value: profile.batch.name },
+    { icon: UserIcon, label: "First Name", value: u.first_name || "—" },
+    { icon: UserIcon, label: "Last Name", value: u.last_name || "—" },
+    { icon: Mail, label: "Email", value: u.email || "—" },
+    { icon: Phone, label: "Mobile", value: u.mobile || "—", mono: true },
+    { icon: Home, label: "Address", value: u.address || "—" },
+    { icon: School, label: "School", value: profile.school || "—" },
+    { icon: Hash, label: "Callup Number", value: profile.call_up_no || "—", mono: true },
+    {
+      icon: GraduationCap,
+      label: "Class",
+      value: batch ? batch.name : "—",
+    },
     {
       icon: Clock,
       label: "Class Schedule",
-      value: `${profile.batch.day} · ${profile.batch.start_time} – ${profile.batch.end_time}`,
+      value: batch ? `${batch.day} · ${batch.start_time} – ${batch.end_time}` : "—",
     },
   ];
 
@@ -124,8 +130,8 @@ export function ProfilePage({ onLogout }: { onLogout: () => void }) {
       <FadeIn>
         <div className={cn(cardSurface, "flex flex-col items-center gap-4 p-6 sm:flex-row sm:items-center sm:gap-5")}>
           <div className="flex size-16 items-center justify-center rounded-2xl bg-primary font-mono text-xl text-primary-foreground">
-            {u.first_name[0]}
-            {u.last_name[0]}
+            {(u.first_name?.[0] ?? "?")}
+            {(u.last_name?.[0] ?? "?")}
           </div>
           <div className="text-center sm:text-left">
             <p className="font-display text-xl tracking-tight">
@@ -351,6 +357,8 @@ function PasswordField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="••••••••"
+          autoComplete={id === "current" ? "current-password" : "new-password"}
+          minLength={8}
           aria-invalid={!!error}
           className="h-11 rounded-xl pl-10"
         />

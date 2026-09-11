@@ -77,6 +77,12 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
       setErr(res?.msg ?? "Login failed");
       return;
     }
+    // This portal is for students only — staff/admin JWTs are rejected here
+    // (the backend also rejects their data calls).
+    if (res.data.user?.roles && res.data.user.roles !== "student") {
+      setErr("This portal is for students only. Staff and admin accounts cannot sign in here.");
+      return;
+    }
     localStorage.setItem("token", res.data.token);
     localStorage.setItem("user", JSON.stringify(res.data.user));
 

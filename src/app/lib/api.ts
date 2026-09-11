@@ -6,7 +6,7 @@ import axios from "axios";
 const api = axios.create({
   // VITE_API_URL=/api routes dev requests through the Vite proxy (same-origin).
   // Falls back to a direct URL otherwise.
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5001/api",
   timeout: 60000,
 });
 
@@ -18,6 +18,28 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// True when the backend rejected the call because the student's account (or
+// their batch) is deactivated — the active-account middleware answers 403 with
+// the message "Deactivated Student".
+export const isDeactivatedError = (error: any): boolean => {
+  const msg: string = error?.response?.data?.msg ?? "";
+  return error?.response?.status === 403 && msg.toLowerCase().includes("deactivat");
+};
+
+// Tell the app whenever any (non-auth) call hits the deactivated gate, so the
+// dashboard can switch to the "Deactivated Student" screen immediately. Login
+// endpoints are excluded — at login the page already shows the backend message.
+api.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    const url: string = error?.config?.url ?? "";
+    if (isDeactivatedError(error) && !url.includes("/auth/") && localStorage.getItem("token")) {
+      window.dispatchEvent(new Event("student-deactivated"));
+    }
+    return Promise.reject(error);
+  },
+);
 
 export interface StudentUser {
   id: string;
@@ -93,6 +115,13 @@ export interface PerformancePaper {
   comments: string;
 }
 
+export interface TopStudent {
+  rank: number;
+  call_up_no: string;
+  name: string;
+  average: number;
+}
+
 export interface StudentPerformance {
   call_up_no: string;
   batch_id: string;
@@ -104,6 +133,7 @@ export interface StudentPerformance {
     averageMark: number | null;
     latestMark: number | null;
   };
+  top_students: TopStudent[];
 }
 
 // GET /api/marks/student-performance/:userId — the logged-in student's own
@@ -154,4 +184,18 @@ export const getMaterialSignedUrl = async (
 ): Promise<{ url: string; type: string }> => {
   const res = await api.get(`/materials/${materialId}/signed-url`);
   return res.data?.data;
+};
+
+// GET /api/materials/:id/file — download the material's bytes THROUGH the
+// backend (so the R2 bucket needs no CORS for pdf.js's XHR fetch) and hand the
+// PDF viewer a local blob URL. Callers should revoke the URL when done.
+export const getMaterialFileBlobUrl = async (materialId: string): Promise<string> => {
+  const res = await api.get(`/materials/${materialId}/file`, {
+    responseType: "blob",
+  });
+  const blob =
+    res.data instanceof Blob
+      ? res.data
+      : new Blob([res.data], { type: "application/pdf" });
+  return URL.createObjectURL(blob);
 };

@@ -10,7 +10,8 @@ import { PerformancePage } from "./components/performance/performance-page";
 import { ProfilePage } from "./components/profile/profile-page";
 import { PdfViewerPage } from "./components/viewer/pdf-viewer-page";
 import { VideoPlayerPage } from "./components/viewer/video-player-page";
-import { autoLogin } from "./lib/api";
+import { DeactivatedView } from "./components/shared/deactivated-view";
+import { autoLogin, isDeactivatedError } from "./lib/api";
 import type { PageKey } from "./components/layout/nav";
 import type { Material } from "./lib/types";
 
@@ -22,8 +23,17 @@ interface ViewerState {
 export default function App() {
   const [authed, setAuthed] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
+  const [deactivated, setDeactivated] = useState(false);
   const [page, setPage] = useState<PageKey>("dashboard");
   const [viewer, setViewer] = useState<ViewerState | null>(null);
+
+  // Any API call answered with "Deactivated Student" (403 from the backend's
+  // active-account middleware) flips the whole portal to the deactivated view.
+  useEffect(() => {
+    const onDeactivated = () => setDeactivated(true);
+    window.addEventListener("student-deactivated", onDeactivated);
+    return () => window.removeEventListener("student-deactivated", onDeactivated);
+  }, []);
 
   // Autologin: restore the session from the JWT in localStorage on load
   useEffect(() => {
@@ -35,14 +45,33 @@ export default function App() {
       try {
         const res = await autoLogin();
         if (res?.success) {
+          // Drop staff/admin sessions — this portal is for students only and
+          // the backend rejects their data calls anyway.
+          const raw = localStorage.getItem("user");
+          const stored = raw ? JSON.parse(raw) : null;
+          if (stored?.roles && stored.roles !== "student") {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+          } else {
+            setAuthed(true);
+          }
+        } else if ((res?.msg ?? "").toLowerCase().includes("deactivat")) {
+          // Account (or its batch) is deactivated — keep the session and show
+          // the "Deactivated Student" screen instead of logging out.
           setAuthed(true);
+          setDeactivated(true);
         } else {
           localStorage.removeItem("token");
           localStorage.removeItem("user");
         }
-      } catch {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+      } catch (error) {
+        if (isDeactivatedError(error)) {
+          setAuthed(true);
+          setDeactivated(true);
+        } else {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+        }
       } finally {
         setAuthLoading(false);
       }
@@ -54,6 +83,7 @@ export default function App() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setAuthed(false);
+    setDeactivated(false);
     setPage("dashboard");
     setViewer(null);
   };
@@ -79,9 +109,11 @@ export default function App() {
     scrollTop();
   };
 
-  const contentKey = viewer
-    ? `viewer-${viewer.type}-${viewer.material.material_id}`
-    : page;
+  const contentKey = deactivated
+    ? "deactivated"
+    : viewer
+      ? `viewer-${viewer.type}-${viewer.material.material_id}`
+      : page;
 
   if (authLoading) {
     return (
@@ -107,7 +139,9 @@ export default function App() {
               onNavigate={navigate}
               onLogout={logout}
             >
-              {viewer ? (
+              {deactivated ? (
+                <DeactivatedView onLogout={logout} />
+              ) : viewer ? (
                 viewer.type === "pdf" ? (
                   <PdfViewerPage material={viewer.material} onBack={closeViewer} />
                 ) : (

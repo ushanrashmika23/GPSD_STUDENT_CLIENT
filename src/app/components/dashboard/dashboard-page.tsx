@@ -3,7 +3,6 @@ import {
   ArrowUpRight,
   CalendarDays,
   FileText,
-  Layers,
   Medal,
   Percent,
   Pin,
@@ -28,7 +27,9 @@ import {
   getStudentProfile,
   type StudentPerformance,
   type StudentProfile,
+  type TopStudent,
 } from "../../lib/api";
+import { tones } from "../../lib/accents";
 import { toMaterial, type MaterialRow } from "../materials/materials-page";
 import type { Material } from "../../lib/types";
 import type { PageKey } from "../layout/nav";
@@ -67,8 +68,8 @@ export function DashboardPage({
       console.error("Dashboard load failed:", error);
       setLoadErr(
         error?.response?.data?.msg ??
-          error?.message ??
-          "Could not load your dashboard."
+        error?.message ??
+        "Could not load your dashboard."
       );
     } finally {
       setLoading(false);
@@ -166,7 +167,7 @@ export function DashboardPage({
       ) : null}
 
       {/* Inspirational strip */}
-    {/*  <FadeIn delay={0.06}>
+      {/* <FadeIn delay={0.06}>
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="relative overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-5">
             <div className="flex items-center gap-3">
@@ -191,7 +192,7 @@ export function DashboardPage({
             </p>
           </div>
         </div>
-      </FadeIn>*}
+      </FadeIn> */}
 
       {/* Quick stats */}
       <section>
@@ -225,13 +226,7 @@ export function DashboardPage({
               tone="emerald"
               hint={latestPaper}
             />
-            <StatCard
-              label="Total Materials"
-              value={mats.length}
-              icon={Layers}
-              tone="sky"
-              hint="Available to you"
-            />
+            <TopStudentsCard students={perf?.top_students ?? []} />
           </Stagger>
         ) : null}
       </section>
@@ -256,58 +251,58 @@ export function DashboardPage({
             </div>
           ) : (
             <div className="space-y-4">
-            <Stagger className="space-y-3">
-              {noticePager.pageItems.map((n) => (
-                <StaggerItem key={n.notice_id}>
-                  <article
-                    className={cn(
-                      cardSurface,
-                      "p-5",
-                      n.pinned && "ring-1 ring-primary/15",
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={cn(
-                          "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl",
-                          n.pinned
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-accent text-primary",
-                        )}
-                      >
-                        {n.pinned ? (
-                          <Pin className="size-4" />
-                        ) : (
-                          <CalendarDays className="size-4" />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-3">
-                          <h3 className="text-[0.975rem] tracking-tight">
-                            {n.title}
-                          </h3>
-                          <time className="shrink-0 font-mono text-xs text-muted-foreground">
-                            {formatLong(n.date)}
-                          </time>
+              <Stagger className="space-y-3">
+                {noticePager.pageItems.map((n) => (
+                  <StaggerItem key={n.notice_id}>
+                    <article
+                      className={cn(
+                        cardSurface,
+                        "p-5",
+                        n.pinned && "ring-1 ring-primary/15",
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={cn(
+                            "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl",
+                            n.pinned
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-accent text-primary",
+                          )}
+                        >
+                          {n.pinned ? (
+                            <Pin className="size-4" />
+                          ) : (
+                            <CalendarDays className="size-4" />
+                          )}
                         </div>
-                        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                          {n.description}
-                        </p>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <h3 className="text-[0.975rem] tracking-tight">
+                              {n.title}
+                            </h3>
+                            <time className="shrink-0 font-mono text-xs text-muted-foreground">
+                              {formatLong(n.date)}
+                            </time>
+                          </div>
+                          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                            {n.description}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                </StaggerItem>
-              ))}
-            </Stagger>
-            <Pagination
-              page={noticePager.page}
-              pageCount={noticePager.pageCount}
-              onChange={noticePager.setPage}
-              from={noticePager.from}
-              to={noticePager.to}
-              total={noticePager.total}
-              label="notices"
-            />
+                    </article>
+                  </StaggerItem>
+                ))}
+              </Stagger>
+              <Pagination
+                page={noticePager.page}
+                pageCount={noticePager.pageCount}
+                onChange={noticePager.setPage}
+                from={noticePager.from}
+                to={noticePager.to}
+                total={noticePager.total}
+                label="notices"
+              />
             </div>
           )}
         </section>
@@ -384,6 +379,56 @@ export function DashboardPage({
         )}
       </div>
     </div>
+  );
+}
+
+// Replaces the "Total Materials" stat: the 1st/2nd/3rd of the student's
+// class (average over released papers) from the performance endpoint.
+function TopStudentsCard({ students }: { students: TopStudent[] }) {
+  const rankTone = ["amber", "sky", "violet"] as const;
+  return (
+    <StaggerItem className={cn(cardSurface, "p-5")}>
+      <div className="flex items-start align-middle gap-3">
+        <div
+          className={cn(
+            "flex size-9 items-center justify-center rounded-xl",
+            tones.amber.soft,
+          )}
+        >
+          <Medal className="size-[18px]" strokeWidth={2} />
+        </div>
+        <p className="mt-4 text-sm text-muted-foreground">Top 3 of Your Class</p>
+      </div>
+      {students.length === 0 ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          No marks released yet — standings appear after the first paper.
+        </p>
+      ) : (
+        <ol className="mt-3 space-y-2">
+          {students.map((s, i) => (
+            <li key={s.call_up_no} className="flex items-center gap-2.5">
+              <span
+                className={cn(
+                  "flex size-6 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold",
+                  tones[rankTone[Math.min(i, 2)]].soft,
+                )}
+              >
+                {s.rank}
+              </span>
+              <span
+                className="min-w-0 flex-1 truncate text-sm text-foreground"
+                title={s.name}
+              >
+                {s.name}
+              </span>
+              <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                {s.average}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </StaggerItem>
   );
 }
 
