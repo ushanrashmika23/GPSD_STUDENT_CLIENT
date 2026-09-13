@@ -11,7 +11,9 @@ import { ProfilePage } from "./components/profile/profile-page";
 import { PdfViewerPage } from "./components/viewer/pdf-viewer-page";
 import { VideoPlayerPage } from "./components/viewer/video-player-page";
 import { DeactivatedView } from "./components/shared/deactivated-view";
+import { LanguagePrompt } from "./components/shared/language-prompt";
 import { autoLogin, isDeactivatedError } from "./lib/api";
+import { LanguageProvider, readStoredLang } from "./lib/i18n";
 import type { PageKey } from "./components/layout/nav";
 import type { Material } from "./lib/types";
 
@@ -21,11 +23,25 @@ interface ViewerState {
 }
 
 export default function App() {
+  return (
+    <LanguageProvider>
+      <Portal />
+      <Toaster position="top-center" richColors />
+    </LanguageProvider>
+  );
+}
+
+function Portal() {
   const [authed, setAuthed] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [deactivated, setDeactivated] = useState(false);
   const [page, setPage] = useState<PageKey>("dashboard");
   const [viewer, setViewer] = useState<ViewerState | null>(null);
+  // First login on this browser — nothing stored yet, so ask once for the
+  // preferred language (the answer is kept in localStorage under "lang").
+  const [needsLanguage, setNeedsLanguage] = useState(
+    () => readStoredLang() === null,
+  );
 
   // Any API call answered with "Deactivated Student" (403 from the backend's
   // active-account middleware) flips the whole portal to the deactivated view.
@@ -177,7 +193,14 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
-      <Toaster position="top-center" richColors />
+
+      {/* Asked once, right after the first successful login */}
+      {authed && !deactivated && (
+        <LanguagePrompt
+          open={needsLanguage}
+          onDone={() => setNeedsLanguage(false)}
+        />
+      )}
     </>
   );
 }

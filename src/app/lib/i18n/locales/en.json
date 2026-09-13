@@ -1,0 +1,244 @@
+{
+  "common": {
+    "tryAgain": "Try again",
+    "back": "Back",
+    "logOut": "Log out",
+    "signOut": "Sign out",
+    "general": "General",
+    "student": "Student",
+    "imageError": "Image could not be loaded"
+  },
+
+  "language": {
+    "label": "Language",
+    "short": "EN",
+    "nativeName": "English",
+    "englishLabel": "English",
+    "promptTitle": "Choose your language",
+    "promptSubtitle": "Pick the language you'd like to use in the portal. You can change it any time from the menu.",
+    "promptContinue": "Continue",
+    "promptSaved": "Your choice is saved on this device."
+  },
+
+  "nav": {
+    "dashboard": "Dashboard",
+    "materials": "Materials",
+    "performance": "Performance",
+    "profile": "Profile"
+  },
+
+  "sidebar": {
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar",
+    "tagline": "Combined Maths"
+  },
+
+  "header": {
+    "notifications": "Notifications"
+  },
+
+  "login": {
+    "heroTitle": "Master Combined Maths, one paper at a time.",
+    "heroBody": "Your materials, marks and rank — in one calm, focused workspace. Built for serious A/L candidates.",
+    "statStudents": "Students",
+    "statPassRate": "A/L pass rate",
+    "statTeachingValue": "15 yrs",
+    "statTeachingLabel": "Teaching",
+    "welcomeBack": "Welcome back",
+    "subtitle": "Sign in to your student portal to continue.",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "forgotPassword": "Forgot password?",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "signIn": "Sign in",
+    "orContinueWith": "or continue with",
+    "signInWithGoogle": "Sign in with Google",
+    "newHere": "New to the institute?",
+    "contactOffice": "Contact the office",
+    "welcomeToast": "Welcome back, {name}",
+    "welcomeToastNoName": "Welcome back!",
+    "studentsOnly": "This portal is for students only. Staff and admin accounts cannot sign in here.",
+    "errors": {
+      "notRegistered": "This Google account isn't registered with the institute yet. Please contact the institute office to register.",
+      "wrongCredentials": "Incorrect email or password.",
+      "userNotFound": "No account found with this email.",
+      "invalidEmail": "Please enter a valid email address.",
+      "tooManyAttempts": "Too many attempts. Please try again later.",
+      "network": "Network error. Please check your connection.",
+      "popupBlocked": "Your browser blocked the sign-in window. Allow popups for this site and try again.",
+      "popupClosed": "Sign-in window closed before completing.",
+      "cancelled": "Sign-in was cancelled. Please try again.",
+      "unauthorizedDomain": "This site is not authorized for Firebase sign-in. Please contact the institute office.",
+      "googleDisabled": "Google sign-in is not enabled. Please contact the institute office.",
+      "accountExists": "An account with this email already exists. Sign in with your email & password below — your Google account will be linked automatically.",
+      "failed": "Login failed"
+    }
+  },
+
+  "dashboard": {
+    "greetingMorning": "Good morning",
+    "greetingAfternoon": "Good afternoon",
+    "greetingEvening": "Good evening",
+    "greetingNamed": "{greeting}, {name}",
+    "subtitle": "Here's where you stand this term. Keep the momentum going.",
+    "heroRank": "Current rank",
+    "heroAverage": "Average mark",
+    "ofClass": "of {count}",
+    "outOf100": "out of 100",
+    "statCurrentRank": "Current Rank",
+    "statAverageMark": "Average Mark",
+    "statLatestMark": "Latest Mark",
+    "topPercent": "Top {percent}% of class",
+    "top3": "Top 3 of Your Class",
+    "noMarksYet": "No marks released yet — standings appear after the first paper.",
+    "noticeBoard": "Notice Board",
+    "activeCount": "{count} active",
+    "recentMaterials": "Recent Materials",
+    "viewAll": "View all",
+    "noMaterials": "No materials shared with your class yet.",
+    "loadError": "Could not load your dashboard."
+  },
+
+  "materials": {
+    "title": "Materials",
+    "subtitle": "Lecture notes, worked papers and class recordings — all in one place.",
+    "searchPlaceholder": "Search materials, lessons or topics…",
+    "allLessons": "All lessons",
+    "filterAll": "All",
+    "filterPdfs": "PDFs",
+    "filterRecordings": "Recordings",
+    "result_one": "{count} result",
+    "result_other": "{count} results",
+    "viewPdf": "View PDF",
+    "watchRecording": "Watch Recording",
+    "emptyFiltered": "No materials found",
+    "emptyFilteredBody": "Nothing matches your current filters. Try a different search term or clear the filters to see everything.",
+    "emptyNone": "No materials yet",
+    "emptyNoneBody": "The institute hasn't shared any materials with your class yet. Check back later.",
+    "clearFilters": "Clear filters",
+    "loadError": "Could not load your materials."
+  },
+
+  "performance": {
+    "title": "Performance",
+    "subtitle": "Track your marks and class rank across every graded test this term.",
+    "currentRank": "Current Rank",
+    "bestRank": "Best Rank",
+    "personalBest": "Personal best",
+    "ofStudents_one": "of {count} student",
+    "ofStudents_other": "of {count} students",
+    "averageMark": "Average Mark",
+    "latestMark": "Latest Mark",
+    "marksProgress": "Marks Progress",
+    "marksProgressCaption": "Your marks vs. class average",
+    "you": "You",
+    "classAvg": "Class avg",
+    "classAvgValue": "Class avg · {value}",
+    "rankHistory": "Rank History",
+    "rankHistoryCaption": "Class rank over time (lower is better)",
+    "resultsHistory": "Results History",
+    "searchPlaceholder": "Search tests or feedback…",
+    "mark": "Mark",
+    "rank": "Rank",
+    "noResults": "No results found",
+    "noResultsBody": "No graded tests match your search. Try a different test name, lesson or keyword.",
+    "emptyTitle": "No results published yet",
+    "emptyBody": "Your marks will appear here once the institute releases your first test results.",
+    "loadError": "Could not load your performance data."
+  },
+
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Your account details and security settings.",
+    "information": "Profile Information",
+    "informationHint": "Contact the office to update these details.",
+    "fields": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "mobile": "Mobile",
+      "address": "Address",
+      "school": "School",
+      "callupNumber": "Callup Number",
+      "class": "Class",
+      "classSchedule": "Class Schedule"
+    },
+    "changePassword": "Change Password",
+    "changePasswordHint": "Use at least 8 characters.",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm Password",
+    "tooShort": "Must be at least 8 characters",
+    "mismatch": "Passwords do not match",
+    "save": "Save Changes",
+    "updated": "Password updated",
+    "updatedBody": "Your password has been changed successfully.",
+    "loadError": "Could not load your profile.",
+    "errors": {
+      "sessionExpired": "Your session has expired. Please sign out and sign in again.",
+      "wrongCurrent": "Your current password is incorrect.",
+      "weak": "New password is too weak. Use at least 8 characters.",
+      "tooManyAttempts": "Too many attempts. Please try again later.",
+      "recentLogin": "Please sign in again and retry.",
+      "network": "Network error. Please check your connection.",
+      "failed": "Failed to update password."
+    }
+  },
+
+  "viewer": {
+    "download": "Download",
+    "fullscreen": "Fullscreen",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "resetZoom": "Reset zoom",
+    "fitWidth": "Fit width",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "loadingDocument": "Loading document…",
+    "page_one": "{count} page",
+    "page_other": "{count} pages",
+    "couldNotLoad": "Could not load this document.",
+    "couldNotRender": "Could not render this document.",
+    "documentDetails": "Document details",
+    "tip": "Tip: use the ← / → keys to flip pages, and zoom or fit the page with the toolbar.",
+    "nowPlaying": "Now playing",
+    "play": "Play",
+    "pause": "Pause",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "volume": "Volume",
+    "backSeconds": "Back {seconds}s",
+    "backSecondsLabel": "Back {seconds} seconds",
+    "forwardSeconds": "Forward {seconds}s",
+    "forwardSecondsLabel": "Forward {seconds} seconds",
+    "pictureInPicture": "Picture in picture",
+    "playbackSpeed": "Playback speed",
+    "upNext": "Up next",
+    "noOtherRecordings": "No other recordings shared with your class yet.",
+    "couldNotLoadRecording": "Could not load this recording."
+  },
+
+  "materialType": {
+    "pdf": "PDF",
+    "recording": "Recording"
+  },
+
+  "pagination": {
+    "showing": "Showing {from}–{to} of {total} {label}",
+    "previous": "Previous page",
+    "next": "Next page",
+    "labels": {
+      "materials": "materials",
+      "results": "results",
+      "notices": "notices"
+    }
+  },
+
+  "deactivated": {
+    "title": "Deactivated Student",
+    "body": "Your student account has been deactivated by the institute. Please contact the institute office for more information."
+  }
+}

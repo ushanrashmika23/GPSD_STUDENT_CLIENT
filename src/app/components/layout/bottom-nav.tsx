@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import { cn } from "../ui/utils";
 import { navItems, type PageKey } from "./nav";
+import { useI18n } from "../../lib/i18n";
 
 export function BottomNav({
   active,
@@ -9,6 +10,8 @@ export function BottomNav({
   active: PageKey;
   onNavigate: (key: PageKey) => void;
 }) {
+  const { t } = useI18n();
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/90 backdrop-blur-lg lg:hidden">
       <div className="mx-auto flex max-w-md items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
@@ -34,7 +37,7 @@ export function BottomNav({
                 className="size-[22px]"
                 strokeWidth={isActive ? 2.4 : 2}
               />
-              <span>{item.label}</span>
+              <span>{t(item.labelKey)}</span>
             </button>
           );
         })}

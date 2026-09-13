@@ -26,11 +26,20 @@ import {
 import { cn } from "../ui/utils";
 import { usePagination } from "../../lib/use-pagination";
 import { toneFor } from "../../lib/accents";
+import { formatLong } from "../../lib/format";
+import { useI18n } from "../../lib/i18n";
 import { getStudentMaterials, type StudentMaterial } from "../../lib/api";
 import type { Material, MaterialType } from "../../lib/types";
 
 type TypeFilter = "all" | MaterialType;
 const PAGE_SIZE = 6;
+
+// Label for each filter chip
+const FILTER_LABEL_KEY: Record<TypeFilter, string> = {
+  all: "materials.filterAll",
+  PDF: "materials.filterPdfs",
+  Recording: "materials.filterRecordings",
+};
 
 // A fetched material plus its real lesson title (used for search/filters)
 export type MaterialRow = Material & { lesson_title: string };
@@ -40,6 +49,7 @@ export function MaterialsPage({
 }: {
   onOpen: (m: Material) => void;
 }) {
+  const { t, lang } = useI18n();
   const [rows, setRows] = useState<MaterialRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadErr, setLoadErr] = useState("");
@@ -61,7 +71,7 @@ export function MaterialsPage({
       setLoadErr(
         error?.response?.data?.msg ??
           error?.message ??
-          "Could not load your materials."
+          t("materials.loadError")
       );
     } finally {
       setLoading(false);
@@ -112,8 +122,8 @@ export function MaterialsPage({
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Materials"
-        subtitle="Lecture notes, worked papers and class recordings — all in one place."
+        title={t("materials.title")}
+        subtitle={t("materials.subtitle")}
       />
 
       {loadErr && (
@@ -125,7 +135,7 @@ export function MaterialsPage({
         >
           <p className="text-sm text-destructive">{loadErr}</p>
           <Button variant="outline" onClick={load} className="rounded-xl">
-            Try again
+            {t("common.tryAgain")}
           </Button>
         </div>
       )}
@@ -138,16 +148,16 @@ export function MaterialsPage({
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search materials, lessons or topics…"
+              placeholder={t("materials.searchPlaceholder")}
               className="h-11 rounded-xl pl-11"
             />
           </div>
           <Select value={lesson} onValueChange={setLesson}>
             <SelectTrigger className="h-11 rounded-xl sm:w-56">
-              <SelectValue placeholder="All lessons" />
+              <SelectValue placeholder={t("materials.allLessons")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All lessons</SelectItem>
+              <SelectItem value="all">{t("materials.allLessons")}</SelectItem>
               {lessonOptions.map(([id, title]) => (
                 <SelectItem key={id} value={id}>
                   {title}
@@ -161,23 +171,23 @@ export function MaterialsPage({
       {/* Type segmented filter */}
       {!loadErr && (
         <div className="flex items-center gap-2">
-          {(["all", "PDF", "Recording"] as TypeFilter[]).map((t) => (
+          {(["all", "PDF", "Recording"] as TypeFilter[]).map((filter) => (
             <button
-              key={t}
-              onClick={() => setType(t)}
+              key={filter}
+              onClick={() => setType(filter)}
               className={cn(
                 "rounded-full border px-3.5 py-1.5 text-sm transition-colors",
-                type === t
+                type === filter
                   ? "border-transparent bg-primary text-primary-foreground"
                   : "border-border bg-card text-muted-foreground hover:text-foreground",
               )}
             >
-              {t === "all" ? "All" : t === "PDF" ? "PDFs" : "Recordings"}
+              {t(FILTER_LABEL_KEY[filter])}
             </button>
           ))}
           {!loading && (
             <span className="ml-auto text-sm text-muted-foreground">
-              {filtered.length} {filtered.length === 1 ? "result" : "results"}
+              {t("materials.result", { count: filtered.length })}
             </span>
           )}
         </div>
@@ -193,16 +203,20 @@ export function MaterialsPage({
       ) : !loadErr && filtered.length === 0 ? (
         <EmptyState
           icon={hasActiveFilters ? SearchX : FolderOpen}
-          title={hasActiveFilters ? "No materials found" : "No materials yet"}
+          title={
+            hasActiveFilters
+              ? t("materials.emptyFiltered")
+              : t("materials.emptyNone")
+          }
           description={
             hasActiveFilters
-              ? "Nothing matches your current filters. Try a different search term or clear the filters to see everything."
-              : "The institute hasn't shared any materials with your class yet. Check back later."
+              ? t("materials.emptyFilteredBody")
+              : t("materials.emptyNoneBody")
           }
           action={
             hasActiveFilters ? (
               <Button variant="outline" className="rounded-xl" onClick={reset}>
-                Clear filters
+                {t("materials.clearFilters")}
               </Button>
             ) : undefined
           }
@@ -221,7 +235,7 @@ export function MaterialsPage({
                       <MaterialTypeBadge type={m.type} />
                       <span className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground">
                         <CalendarDays className="size-3.5" />
-                        {formatLong(m.date_added)}
+                        {formatLong(m.date_added, lang)}
                       </span>
                     </div>
 
@@ -248,12 +262,12 @@ export function MaterialsPage({
                       {m.type === "PDF" ? (
                         <>
                           <FileText className="size-4" />
-                          View PDF
+                          {t("materials.viewPdf")}
                         </>
                       ) : (
                         <>
                           <PlayCircle className="size-4" />
-                          Watch Recording
+                          {t("materials.watchRecording")}
                         </>
                       )}
                     </Button>
@@ -270,21 +284,13 @@ export function MaterialsPage({
             from={from}
             to={to}
             total={total}
-            label="materials"
+            labelKey="pagination.labels.materials"
           />
         </div>
       ) : null}
     </div>
   );
 }
-
-// e.g. 2026-03-12T00:00:00.000Z → "12 Mar 2026"
-const formatLong = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
 
 // Default thumbnail handed to recordings before the player opens
 // (the DB stores no poster image for videos).

@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 import { auth } from "../../lib/firebase";
 import { getStudentProfile, type StudentProfile } from "../../lib/api";
+import { useI18n } from "../../lib/i18n";
 import { PageHeader } from "../shared/page-header";
 import { FadeIn } from "../shared/motion";
 import { cardSurface } from "../shared/surface";
@@ -32,6 +33,7 @@ import { Button } from "../ui/button";
 import { cn } from "../ui/utils";
 
 export function ProfilePage({ onLogout }: { onLogout: () => void }) {
+  const { t } = useI18n();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadErr, setLoadErr] = useState("");
@@ -47,7 +49,7 @@ export function ProfilePage({ onLogout }: { onLogout: () => void }) {
       setLoadErr(
         error?.response?.data?.msg ??
           error?.message ??
-          "Could not load your profile."
+          t("profile.loadError")
       );
     } finally {
       setLoading(false);
@@ -62,8 +64,8 @@ export function ProfilePage({ onLogout }: { onLogout: () => void }) {
     return (
       <div className="space-y-8">
         <PageHeader
-          title="Profile"
-          subtitle="Your account details and security settings."
+          title={t("profile.title")}
+          subtitle={t("profile.subtitle")}
         />
         <div className={cn(cardSurface, "flex items-center justify-center p-16")}>
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -76,8 +78,8 @@ export function ProfilePage({ onLogout }: { onLogout: () => void }) {
     return (
       <div className="space-y-8">
         <PageHeader
-          title="Profile"
-          subtitle="Your account details and security settings."
+          title={t("profile.title")}
+          subtitle={t("profile.subtitle")}
         />
         <div
           className={cn(
@@ -86,10 +88,10 @@ export function ProfilePage({ onLogout }: { onLogout: () => void }) {
           )}
         >
           <p className="text-sm text-destructive">
-            {loadErr || "Could not load your profile."}
+            {loadErr || t("profile.loadError")}
           </p>
           <Button variant="outline" onClick={load} className="rounded-xl">
-            Try again
+            {t("common.tryAgain")}
           </Button>
         </div>
       </div>
@@ -100,21 +102,21 @@ export function ProfilePage({ onLogout }: { onLogout: () => void }) {
   // Fallbacks ("—") guard against incomplete records from the backend
   const batch = profile.batch;
   const fields: { icon: LucideIcon; label: string; value: string; mono?: boolean }[] = [
-    { icon: UserIcon, label: "First Name", value: u.first_name || "—" },
-    { icon: UserIcon, label: "Last Name", value: u.last_name || "—" },
-    { icon: Mail, label: "Email", value: u.email || "—" },
-    { icon: Phone, label: "Mobile", value: u.mobile || "—", mono: true },
-    { icon: Home, label: "Address", value: u.address || "—" },
-    { icon: School, label: "School", value: profile.school || "—" },
-    { icon: Hash, label: "Callup Number", value: profile.call_up_no || "—", mono: true },
+    { icon: UserIcon, label: t("profile.fields.firstName"), value: u.first_name || "—" },
+    { icon: UserIcon, label: t("profile.fields.lastName"), value: u.last_name || "—" },
+    { icon: Mail, label: t("profile.fields.email"), value: u.email || "—" },
+    { icon: Phone, label: t("profile.fields.mobile"), value: u.mobile || "—", mono: true },
+    { icon: Home, label: t("profile.fields.address"), value: u.address || "—" },
+    { icon: School, label: t("profile.fields.school"), value: profile.school || "—" },
+    { icon: Hash, label: t("profile.fields.callupNumber"), value: profile.call_up_no || "—", mono: true },
     {
       icon: GraduationCap,
-      label: "Class",
+      label: t("profile.fields.class"),
       value: batch ? batch.name : "—",
     },
     {
       icon: Clock,
-      label: "Class Schedule",
+      label: t("profile.fields.classSchedule"),
       value: batch ? `${batch.day} · ${batch.start_time} – ${batch.end_time}` : "—",
     },
   ];
@@ -122,8 +124,8 @@ export function ProfilePage({ onLogout }: { onLogout: () => void }) {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Profile"
-        subtitle="Your account details and security settings."
+        title={t("profile.title")}
+        subtitle={t("profile.subtitle")}
       />
 
       {/* Identity banner */}
@@ -156,7 +158,7 @@ export function ProfilePage({ onLogout }: { onLogout: () => void }) {
             onClick={onLogout}
             className="rounded-xl sm:ml-auto"
           >
-            Sign out
+            {t("common.signOut")}
           </Button>
         </div>
       </FadeIn>
@@ -170,9 +172,11 @@ export function ProfilePage({ onLogout }: { onLogout: () => void }) {
                 <AtSign className="size-[18px]" />
               </div>
               <div>
-                <h2 className="text-[1.0rem] tracking-tight">Profile Information</h2>
+                <h2 className="text-[1.0rem] tracking-tight">
+                  {t("profile.information")}
+                </h2>
                 <p className="text-xs text-muted-foreground">
-                  Contact the office to update these details.
+                  {t("profile.informationHint")}
                 </p>
               </div>
             </div>
@@ -208,25 +212,26 @@ export function ProfilePage({ onLogout }: { onLogout: () => void }) {
 }
 
 // Friendly messages for password-change failures
-const friendlyPasswordError = (error: any): string => {
+const friendlyPasswordError = (error: any, t: (key: string) => string): string => {
   switch (error?.code) {
     case "auth/wrong-password":
     case "auth/invalid-credential":
-      return "Your current password is incorrect.";
+      return t("profile.errors.wrongCurrent");
     case "auth/weak-password":
-      return "New password is too weak. Use at least 8 characters.";
+      return t("profile.errors.weak");
     case "auth/too-many-requests":
-      return "Too many attempts. Please try again later.";
+      return t("profile.errors.tooManyAttempts");
     case "auth/requires-recent-login":
-      return "Please sign in again and retry.";
+      return t("profile.errors.recentLogin");
     case "auth/network-request-failed":
-      return "Network error. Please check your connection.";
+      return t("profile.errors.network");
     default:
-      return error?.message ?? "Failed to update password.";
+      return error?.message ?? t("profile.errors.failed");
   }
 };
 
 function ChangePasswordCard() {
+  const { t } = useI18n();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -248,7 +253,7 @@ function ChangePasswordCard() {
     try {
       const fbUser = auth.currentUser;
       if (!fbUser || !fbUser.email) {
-        setErr("Your session has expired. Please sign out and sign in again.");
+        setErr(t("profile.errors.sessionExpired"));
         return;
       }
 
@@ -261,12 +266,12 @@ function ChangePasswordCard() {
       setCurrent("");
       setNext("");
       setConfirm("");
-      toast.success("Password updated", {
-        description: "Your password has been changed successfully.",
+      toast.success(t("profile.updated"), {
+        description: t("profile.updatedBody"),
       });
     } catch (error: any) {
       console.error("Password change failed:", error);
-      setErr(friendlyPasswordError(error));
+      setErr(friendlyPasswordError(error, t));
     } finally {
       setSaving(false);
     }
@@ -279,9 +284,11 @@ function ChangePasswordCard() {
           <KeyRound className="size-[18px]" />
         </div>
         <div>
-          <h2 className="text-[1.0rem] tracking-tight">Change Password</h2>
+          <h2 className="text-[1.0rem] tracking-tight">
+            {t("profile.changePassword")}
+          </h2>
           <p className="text-xs text-muted-foreground">
-            Use at least 8 characters.
+            {t("profile.changePasswordHint")}
           </p>
         </div>
       </div>
@@ -289,23 +296,23 @@ function ChangePasswordCard() {
       <div className="mt-6 space-y-4">
         <PasswordField
           id="current"
-          label="Current Password"
+          label={t("profile.currentPassword")}
           value={current}
           onChange={setCurrent}
         />
         <PasswordField
           id="next"
-          label="New Password"
+          label={t("profile.newPassword")}
           value={next}
           onChange={setNext}
-          error={tooShort ? "Must be at least 8 characters" : undefined}
+          error={tooShort ? t("profile.tooShort") : undefined}
         />
         <PasswordField
           id="confirm"
-          label="Confirm Password"
+          label={t("profile.confirmPassword")}
           value={confirm}
           onChange={setConfirm}
-          error={mismatch ? "Passwords do not match" : undefined}
+          error={mismatch ? t("profile.mismatch") : undefined}
         />
       </div>
 
@@ -325,7 +332,7 @@ function ChangePasswordCard() {
         ) : (
           <>
             <Check className="size-4" />
-            Save Changes
+            {t("profile.save")}
           </>
         )}
       </Button>

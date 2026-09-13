@@ -17,15 +17,19 @@ import { Label } from "../ui/label";
 import { Button } from "../ui/button";
 import { softShadow } from "../shared/surface";
 import { cn } from "../ui/utils";
+import { useI18n } from "../../lib/i18n";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
 // Friendly messages for common auth failures
-const friendlyAuthError = (error: any): string => {
+const friendlyAuthError = (
+  error: any,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string => {
   // Backend rejection — e.g. the Google account isn't linked to a student record
   const status = error?.response?.status;
   if (status === 404) {
-    return "This Google account isn't registered with the institute yet. Please contact the institute office to register.";
+    return t("login.errors.notRegistered");
   }
   const backendMsg = error?.response?.data?.msg;
   if (backendMsg) return backendMsg;
@@ -33,33 +37,34 @@ const friendlyAuthError = (error: any): string => {
   switch (error?.code) {
     case "auth/wrong-password":
     case "auth/invalid-credential":
-      return "Incorrect email or password.";
+      return t("login.errors.wrongCredentials");
     case "auth/user-not-found":
-      return "No account found with this email.";
+      return t("login.errors.userNotFound");
     case "auth/invalid-email":
-      return "Please enter a valid email address.";
+      return t("login.errors.invalidEmail");
     case "auth/too-many-requests":
-      return "Too many attempts. Please try again later.";
+      return t("login.errors.tooManyAttempts");
     case "auth/network-request-failed":
-      return "Network error. Please check your connection.";
+      return t("login.errors.network");
     case "auth/popup-blocked":
-      return "Your browser blocked the sign-in window. Allow popups for this site and try again.";
+      return t("login.errors.popupBlocked");
     case "auth/popup-closed-by-user":
-      return "Sign-in window closed before completing.";
+      return t("login.errors.popupClosed");
     case "auth/cancelled-popup-request":
-      return "Sign-in was cancelled. Please try again.";
+      return t("login.errors.cancelled");
     case "auth/unauthorized-domain":
-      return "This site is not authorized for Firebase sign-in. Please contact the institute office.";
+      return t("login.errors.unauthorizedDomain");
     case "auth/operation-not-allowed":
-      return "Google sign-in is not enabled. Please contact the institute office.";
+      return t("login.errors.googleDisabled");
     case "auth/account-exists-with-different-credential":
-      return "An account with this email already exists. Sign in with your email & password below — your Google account will be linked automatically.";
+      return t("login.errors.accountExists");
     default:
-      return error?.message ?? "Login failed";
+      return error?.message ?? t("login.errors.failed");
   }
 };
 
 export function LoginPage({ onLogin }: { onLogin: () => void }) {
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -74,13 +79,13 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
   // No refresh token — one long-lived JWT kept in localStorage.
   const finishLogin = (res: LoginResult) => {
     if (!res?.success || !res.data?.token) {
-      setErr(res?.msg ?? "Login failed");
+      setErr(res?.msg ?? t("login.errors.failed"));
       return;
     }
     // This portal is for students only — staff/admin JWTs are rejected here
     // (the backend also rejects their data calls).
     if (res.data.user?.roles && res.data.user.roles !== "student") {
-      setErr("This portal is for students only. Staff and admin accounts cannot sign in here.");
+      setErr(t("login.studentsOnly"));
       return;
     }
     localStorage.setItem("token", res.data.token);
@@ -88,7 +93,11 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
 
     const user = res.data.user;
     const name = user ? `${user.first_name} ${user.last_name}`.trim() : "";
-    toast.success(name ? `Welcome back, ${name}` : "Welcome back!");
+    toast.success(
+      name
+        ? t("login.welcomeToast", { name })
+        : t("login.welcomeToastNoName"),
+    );
     onLogin();
   };
 
@@ -115,7 +124,7 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
       finishLogin(await firebaseLogin(idToken));
     } catch (error: any) {
       console.error("Password login failed:", error);
-      setErr(friendlyAuthError(error));
+      setErr(friendlyAuthError(error, t));
     } finally {
       setLoading(false);
     }
@@ -160,7 +169,7 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
         }
       }
 
-      setErr(friendlyAuthError(error));
+      setErr(friendlyAuthError(error, t));
     } finally {
       setLoading(false);
     }
@@ -188,17 +197,19 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
             className="max-w-md space-y-5"
           >
             <p className="font-display text-[2rem] leading-tight tracking-tight">
-              Master Combined Maths, one paper at a time.
+              {t("login.heroTitle")}
             </p>
             <p className="text-[0.95rem] leading-relaxed text-primary-foreground/80">
-              Your materials, marks and rank — in one calm, focused workspace.
-              Built for serious A/L candidates.
+              {t("login.heroBody")}
             </p>
             <div className="flex items-center gap-6 pt-4">
               {[
-                { v: "1,200+", l: "Students" },
-                { v: "98%", l: "A/L pass rate" },
-                { v: "15 yrs", l: "Teaching" },
+                { v: "1,200+", l: t("login.statStudents") },
+                { v: "98%", l: t("login.statPassRate") },
+                {
+                  v: t("login.statTeachingValue"),
+                  l: t("login.statTeachingLabel"),
+                },
               ].map((s) => (
                 <div key={s.l}>
                   <p className="font-mono text-xl tracking-tight">{s.v}</p>
@@ -230,33 +241,35 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
             <span className="font-display text-lg tracking-tight">AxiomMaths</span>
           </div>
 
-          <h1 className="text-[1.6rem] tracking-tight">Welcome back</h1>
+          <h1 className="text-[1.6rem] tracking-tight">
+            {t("login.welcomeBack")}
+          </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Sign in to your student portal to continue.
+            {t("login.subtitle")}
           </p>
 
           <form onSubmit={submit} className="mt-8 space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("login.email")}</Label>
               <Input
                 id="email"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder={t("login.emailPlaceholder")}
                 className="h-11 rounded-xl"
               />
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t("login.password")}</Label>
                 <button
                   type="button"
                   className="text-xs text-primary transition-opacity hover:opacity-70"
                 >
-                  Forgot password?
+                  {t("login.forgotPassword")}
                 </button>
               </div>
               <div className="relative">
@@ -266,13 +279,15 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder={t("login.passwordPlaceholder")}
                   className="h-11 rounded-xl pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPw((s) => !s)}
-                  aria-label={showPw ? "Hide password" : "Show password"}
+                  aria-label={
+                    showPw ? t("login.hidePassword") : t("login.showPassword")
+                  }
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {showPw ? (
@@ -299,7 +314,7 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
                 <Loader2 className="size-4 animate-spin" />
               ) : (
                 <>
-                  Sign in
+                  {t("login.signIn")}
                   <ArrowRight className="size-4" />
                 </>
               )}
@@ -309,7 +324,9 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
           {/* Divider */}
           <div className="my-6 flex items-center gap-3">
             <span className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground">or continue with</span>
+            <span className="text-xs text-muted-foreground">
+              {t("login.orContinueWith")}
+            </span>
             <span className="h-px flex-1 bg-border" />
           </div>
 
@@ -325,13 +342,13 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
             ) : (
               <GoogleIcon />
             )}
-            Sign in with Google
+            {t("login.signInWithGoogle")}
           </Button>
 
           <p className="mt-8 text-center text-sm text-muted-foreground">
-            New to the institute?{" "}
+            {t("login.newHere")}{" "}
             <button className="text-primary transition-opacity hover:opacity-70">
-              Contact the office
+              {t("login.contactOffice")}
             </button>
           </p>
         </motion.div>

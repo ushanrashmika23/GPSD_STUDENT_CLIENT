@@ -1,8 +1,10 @@
 import { FileText, PlayCircle } from "lucide-react";
 import { cn } from "../ui/utils";
+import { useI18n } from "../../lib/i18n";
 import type { MaterialType } from "../../lib/types";
 
 export function MaterialTypeBadge({ type }: { type: MaterialType }) {
+  const { t } = useI18n();
   const isPdf = type === "PDF";
   return (
     <span
@@ -18,7 +20,7 @@ export function MaterialTypeBadge({ type }: { type: MaterialType }) {
       ) : (
         <PlayCircle className="size-3.5" />
       )}
-      {type}
+      {t(isPdf ? "materialType.pdf" : "materialType.recording")}
     </span>
   );
 }

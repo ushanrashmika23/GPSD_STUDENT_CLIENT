@@ -31,6 +31,8 @@ import {
 } from "../../lib/api";
 import { tones } from "../../lib/accents";
 import { toMaterial, type MaterialRow } from "../materials/materials-page";
+import { formatLong } from "../../lib/format";
+import { useI18n } from "../../lib/i18n";
 import type { Material } from "../../lib/types";
 import type { PageKey } from "../layout/nav";
 
@@ -43,6 +45,7 @@ export function DashboardPage({
   onNavigate: (k: PageKey) => void;
   onOpen: (m: Material) => void;
 }) {
+  const { t, lang } = useI18n();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [perf, setPerf] = useState<StudentPerformance | null>(null);
   const [mats, setMats] = useState<MaterialRow[]>([]);
@@ -69,7 +72,7 @@ export function DashboardPage({
       setLoadErr(
         error?.response?.data?.msg ??
         error?.message ??
-        "Could not load your dashboard."
+        t("dashboard.loadError")
       );
     } finally {
       setLoading(false);
@@ -81,7 +84,8 @@ export function DashboardPage({
   }, []);
 
   const recent = mats.slice(0, 4);
-  const greeting = getGreeting();
+  const greeting = getGreeting(t);
+  const firstName = profile?.user.first_name;
   const noticePager = usePagination(notices, NOTICES_PER_PAGE);
 
   const s = perf?.summary;
@@ -97,8 +101,12 @@ export function DashboardPage({
   return (
     <div className="space-y-8">
       <PageHeader
-        title={`${greeting}, ${profile?.user.first_name ?? "there"}`}
-        subtitle="Here's where you stand this term. Keep the momentum going."
+        title={
+          firstName
+            ? t("dashboard.greetingNamed", { greeting, name: firstName })
+            : greeting
+        }
+        subtitle={t("dashboard.subtitle")}
       />
 
       {loadErr && (
@@ -110,7 +118,7 @@ export function DashboardPage({
         >
           <p className="text-sm text-destructive">{loadErr}</p>
           <Button variant="outline" onClick={load} className="rounded-xl">
-            Try again
+            {t("common.tryAgain")}
           </Button>
         </div>
       )}
@@ -151,14 +159,14 @@ export function DashboardPage({
 
               <div className="grid grid-cols-2 gap-3 sm:max-w-xs sm:grid-cols-2">
                 <HeroStat
-                  label="Current rank"
+                  label={t("dashboard.heroRank")}
                   value={`#${s?.currentRank ?? "—"}`}
-                  caption={`of ${classSize}`}
+                  caption={t("dashboard.ofClass", { count: classSize })}
                 />
                 <HeroStat
-                  label="Average mark"
+                  label={t("dashboard.heroAverage")}
                   value={`${s?.averageMark ?? "—"}`}
-                  caption="out of 100"
+                  caption={t("dashboard.outOf100")}
                 />
               </div>
             </div>
@@ -205,21 +213,25 @@ export function DashboardPage({
         ) : !loadErr ? (
           <Stagger className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard
-              label="Current Rank"
+              label={t("dashboard.statCurrentRank")}
               value={`#${s?.currentRank ?? "—"}`}
               icon={Medal}
               tone="indigo"
-              hint={rankPct != null ? `Top ${rankPct}% of class` : undefined}
+              hint={
+                rankPct != null
+                  ? t("dashboard.topPercent", { percent: rankPct })
+                  : undefined
+              }
             />
             <StatCard
-              label="Average Mark"
+              label={t("dashboard.statAverageMark")}
               value={s?.averageMark ?? "—"}
               suffix="/ 100"
               icon={Percent}
               tone="violet"
             />
             <StatCard
-              label="Latest Mark"
+              label={t("dashboard.statLatestMark")}
               value={s?.latestMark ?? "—"}
               suffix="/ 100"
               icon={Target}
@@ -236,10 +248,12 @@ export function DashboardPage({
         {/* Notice board — most important (still mock; wired up later) */}
         <section className="space-y-4 lg:col-span-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg tracking-tight">Notice Board</h2>
+            <h2 className="text-lg tracking-tight">
+              {t("dashboard.noticeBoard")}
+            </h2>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-1 text-xs text-accent-foreground">
               <Pin className="size-3.5" />
-              {notices.length} active
+              {t("dashboard.activeCount", { count: notices.length })}
             </span>
           </div>
 
@@ -282,7 +296,7 @@ export function DashboardPage({
                               {n.title}
                             </h3>
                             <time className="shrink-0 font-mono text-xs text-muted-foreground">
-                              {formatLong(n.date)}
+                              {formatLong(n.date, lang)}
                             </time>
                           </div>
                           <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
@@ -301,7 +315,7 @@ export function DashboardPage({
                 from={noticePager.from}
                 to={noticePager.to}
                 total={noticePager.total}
-                label="notices"
+                labelKey="pagination.labels.notices"
               />
             </div>
           )}
@@ -311,12 +325,14 @@ export function DashboardPage({
         {!loadErr && (
           <section className="space-y-4 lg:col-span-2">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg tracking-tight">Recent Materials</h2>
+              <h2 className="text-lg tracking-tight">
+                {t("dashboard.recentMaterials")}
+              </h2>
               <button
                 onClick={() => onNavigate("materials")}
                 className="inline-flex items-center gap-0.5 text-sm text-primary transition-opacity hover:opacity-70"
               >
-                View all
+                {t("dashboard.viewAll")}
                 <ArrowUpRight className="size-4" />
               </button>
             </div>
@@ -334,7 +350,7 @@ export function DashboardPage({
                   "p-8 text-center text-sm text-muted-foreground",
                 )}
               >
-                No materials shared with your class yet.
+                {t("dashboard.noMaterials")}
               </div>
             ) : (
               <Stagger className="space-y-3">
@@ -366,7 +382,7 @@ export function DashboardPage({
                           {m.material_name}
                         </p>
                         <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                          {m.lesson_title} · {formatLong(m.date_added)}
+                          {m.lesson_title} · {formatLong(m.date_added, lang)}
                         </p>
                       </div>
                       <MaterialTypeBadge type={m.type} />
@@ -385,6 +401,7 @@ export function DashboardPage({
 // Replaces the "Total Materials" stat: the 1st/2nd/3rd of the student's
 // class (average over released papers) from the performance endpoint.
 function TopStudentsCard({ students }: { students: TopStudent[] }) {
+  const { t } = useI18n();
   const rankTone = ["amber", "sky", "violet"] as const;
   return (
     <StaggerItem className={cn(cardSurface, "p-5")}>
@@ -397,11 +414,13 @@ function TopStudentsCard({ students }: { students: TopStudent[] }) {
         >
           <Medal className="size-[18px]" strokeWidth={2} />
         </div>
-        <p className="mt-4 text-sm text-muted-foreground">Top 3 of Your Class</p>
+        <p className="mt-4 text-sm text-muted-foreground">
+          {t("dashboard.top3")}
+        </p>
       </div>
       {students.length === 0 ? (
         <p className="mt-3 text-xs text-muted-foreground">
-          No marks released yet — standings appear after the first paper.
+          {t("dashboard.noMarksYet")}
         </p>
       ) : (
         <ol className="mt-3 space-y-2">
@@ -450,17 +469,9 @@ function HeroStat({
   );
 }
 
-function getGreeting() {
+function getGreeting(t: (key: string) => string) {
   const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
+  if (h < 12) return t("dashboard.greetingMorning");
+  if (h < 17) return t("dashboard.greetingAfternoon");
+  return t("dashboard.greetingEvening");
 }
-
-// e.g. 2026-03-12T00:00:00.000Z → "12 Mar 2026"
-const formatLong = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });

@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "../ui/utils";
+import { useI18n } from "../../lib/i18n";
 
 function pageList(current: number, count: number): (number | "…")[] {
   if (count <= 7) return Array.from({ length: count }, (_, i) => i + 1);
@@ -20,7 +21,7 @@ export function Pagination({
   from,
   to,
   total,
-  label = "items",
+  labelKey,
 }: {
   page: number;
   pageCount: number;
@@ -28,20 +29,17 @@ export function Pagination({
   from: number;
   to: number;
   total: number;
-  label?: string;
+  /** i18n key of the counted noun, e.g. "pagination.labels.materials" */
+  labelKey: string;
 }) {
+  const { t } = useI18n();
+
   if (total === 0) return null;
 
   return (
     <div className="flex flex-col items-center justify-between gap-3 pt-1 sm:flex-row">
       <p className="text-xs text-muted-foreground">
-        Showing{" "}
-        <span className="font-mono tabular-nums text-foreground">
-          {from}–{to}
-        </span>{" "}
-        of{" "}
-        <span className="font-mono tabular-nums text-foreground">{total}</span>{" "}
-        {label}
+        {t("pagination.showing", { from, to, total, label: t(labelKey) })}
       </p>
 
       {pageCount > 1 && (
@@ -49,7 +47,7 @@ export function Pagination({
           <PagerButton
             disabled={page === 1}
             onClick={() => onChange(page - 1)}
-            aria-label="Previous page"
+            aria-label={t("pagination.previous")}
           >
             <ChevronLeft className="size-4" />
           </PagerButton>
@@ -82,7 +80,7 @@ export function Pagination({
           <PagerButton
             disabled={page === pageCount}
             onClick={() => onChange(page + 1)}
-            aria-label="Next page"
+            aria-label={t("pagination.next")}
           >
             <ChevronRight className="size-4" />
           </PagerButton>

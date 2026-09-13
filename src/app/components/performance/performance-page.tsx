@@ -34,11 +34,14 @@ import { Button } from "../ui/button";
 import { cn } from "../ui/utils";
 import { toneFor } from "../../lib/accents";
 import { usePagination } from "../../lib/use-pagination";
+import { formatLong, shortDate } from "../../lib/format";
+import { useI18n } from "../../lib/i18n";
 import { getStudentPerformance, type StudentPerformance } from "../../lib/api";
 
 const RESULTS_PER_PAGE = 5;
 
 export function PerformancePage() {
+  const { t, lang } = useI18n();
   const [perf, setPerf] = useState<StudentPerformance | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadErr, setLoadErr] = useState("");
@@ -55,7 +58,7 @@ export function PerformancePage() {
       setLoadErr(
         error?.response?.data?.msg ??
           error?.message ??
-          "Could not load your performance data."
+          t("performance.loadError")
       );
     } finally {
       setLoading(false);
@@ -72,20 +75,20 @@ export function PerformancePage() {
   const markSeries = useMemo(
     () =>
       papers.map((p) => ({
-        label: shortDate(p.paper_date),
+        label: shortDate(p.paper_date, lang),
         mark: p.mark,
         classAvg: p.class_avg,
       })),
-    [papers],
+    [papers, lang],
   );
 
   const rankSeries = useMemo(
     () =>
       papers.map((p) => ({
-        label: shortDate(p.paper_date),
+        label: shortDate(p.paper_date, lang),
         rank: p.rank ?? 0,
       })),
-    [papers],
+    [papers, lang],
   );
 
   // Results list — newest first
@@ -131,8 +134,8 @@ export function PerformancePage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Performance"
-        subtitle="Track your marks and class rank across every graded test this term."
+        title={t("performance.title")}
+        subtitle={t("performance.subtitle")}
       />
 
       {loadErr && (
@@ -144,7 +147,7 @@ export function PerformancePage() {
         >
           <p className="text-sm text-destructive">{loadErr}</p>
           <Button variant="outline" onClick={load} className="rounded-xl">
-            Try again
+            {t("common.tryAgain")}
           </Button>
         </div>
       )}
@@ -152,8 +155,8 @@ export function PerformancePage() {
       {!loadErr && !loading && papers.length === 0 && (
         <EmptyState
           icon={Award}
-          title="No results published yet"
-          description="Your marks will appear here once the institute releases your first test results."
+          title={t("performance.emptyTitle")}
+          description={t("performance.emptyBody")}
         />
       )}
 
@@ -162,28 +165,30 @@ export function PerformancePage() {
           {/* Summary cards */}
           <Stagger className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard
-              label="Current Rank"
+              label={t("performance.currentRank")}
               value={`#${s?.currentRank ?? "—"}`}
               icon={Medal}
               tone="indigo"
-              hint={`of ${perf?.classSize ?? 0} students`}
+              hint={t("performance.ofStudents", {
+                count: perf?.classSize ?? 0,
+              })}
             />
             <StatCard
-              label="Best Rank"
+              label={t("performance.bestRank")}
               value={`#${s?.bestRank ?? "—"}`}
               icon={Crown}
               tone="amber"
-              hint="Personal best"
+              hint={t("performance.personalBest")}
             />
             <StatCard
-              label="Average Mark"
+              label={t("performance.averageMark")}
               value={s?.averageMark ?? "—"}
               suffix="/ 100"
               icon={Percent}
               tone="violet"
             />
             <StatCard
-              label="Latest Mark"
+              label={t("performance.latestMark")}
               value={s?.latestMark ?? "—"}
               suffix="/ 100"
               icon={Target}
@@ -195,13 +200,17 @@ export function PerformancePage() {
           <div className="grid gap-6 lg:grid-cols-2">
             <FadeIn delay={0.04}>
               <ChartCard
-                title="Marks Progress"
-                caption="Your marks vs. class average"
+                title={t("performance.marksProgress")}
+                caption={t("performance.marksProgressCaption")}
                 icon={TrendingUp}
                 legend={
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <Legend swatch="bg-primary" label="You" />
-                    <Legend swatch="bg-slate-300" dashed label="Class avg" />
+                    <Legend swatch="bg-primary" label={t("performance.you")} />
+                    <Legend
+                      swatch="bg-slate-300"
+                      dashed
+                      label={t("performance.classAvg")}
+                    />
                   </div>
                 }
               >
@@ -265,8 +274,8 @@ export function PerformancePage() {
 
             <FadeIn delay={0.08}>
               <ChartCard
-                title="Rank History"
-                caption="Class rank over time (lower is better)"
+                title={t("performance.rankHistory")}
+                caption={t("performance.rankHistoryCaption")}
                 icon={Award}
               >
                 <ResponsiveContainer width="100%" height={260}>
@@ -316,13 +325,15 @@ export function PerformancePage() {
           {/* Results history */}
           <section className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-lg tracking-tight">Results History</h2>
+              <h2 className="text-lg tracking-tight">
+                {t("performance.resultsHistory")}
+              </h2>
               <div className="relative sm:w-72">
                 <Search className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search tests or feedback…"
+                  placeholder={t("performance.searchPlaceholder")}
                   className="h-11 rounded-xl pl-11"
                 />
               </div>
@@ -331,8 +342,8 @@ export function PerformancePage() {
             {filteredResults.length === 0 ? (
               <EmptyState
                 icon={SearchX}
-                title="No results found"
-                description="No graded tests match your search. Try a different test name, lesson or keyword."
+                title={t("performance.noResults")}
+                description={t("performance.noResultsBody")}
               />
             ) : (
               <div className="space-y-4">
@@ -359,7 +370,7 @@ export function PerformancePage() {
                   from={from}
                   to={to}
                   total={total}
-                  label="results"
+                  labelKey="pagination.labels.results"
                 />
               </div>
             )}
@@ -389,21 +400,6 @@ export function PerformancePage() {
     </div>
   );
 }
-
-// e.g. 2026-03-12T00:00:00.000Z → "12 Mar 2026"
-const formatLong = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-
-// e.g. 2026-03-12T00:00:00.000Z → "12 Mar" (chart axis label)
-const shortDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-  });
 
 const axisTick = { fill: "#64748b", fontSize: 12, fontFamily: "JetBrains Mono" };
 
@@ -479,6 +475,7 @@ function ResultCard({
   rank: number;
   comments: string;
 }) {
+  const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
   const tone = toneFor(lessonId);
   return (
@@ -492,7 +489,7 @@ function ResultCard({
         <div className="min-w-0 flex-1 space-y-2">
           {/* 1 · Date */}
           <time className="font-mono text-xs text-muted-foreground">
-            {formatLong(date)}
+            {formatLong(date, lang)}
           </time>
           {/* 2 · Title (below date) */}
           <div className="flex flex-wrap items-center gap-2">
@@ -504,7 +501,9 @@ function ResultCard({
           {/* 3 · Marks  ·  4 · Rank */}
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-0.5">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Mark</span>
+              <span className="text-xs text-muted-foreground">
+                {t("performance.mark")}
+              </span>
               <span className="font-mono text-sm tabular-nums text-foreground">
                 {mark}
                 <span className="text-muted-foreground">/100</span>
@@ -517,7 +516,9 @@ function ResultCard({
               </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground">Rank</span>
+              <span className="text-xs text-muted-foreground">
+                {t("performance.rank")}
+              </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 font-mono text-xs text-foreground">
                 <Medal className="size-3.5 text-primary" />#{rank}
               </span>
@@ -548,6 +549,7 @@ function ResultCard({
 }
 
 function MarkTooltip({ active, payload }: any) {
+  const { t } = useI18n();
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
   return (
@@ -558,7 +560,7 @@ function MarkTooltip({ active, payload }: any) {
       </p>
       {row.classAvg != null && (
         <p className="font-mono text-xs text-slate-400">
-          Class avg · {row.classAvg}
+          {t("performance.classAvgValue", { value: row.classAvg })}
         </p>
       )}
       <p className="text-xs text-muted-foreground">{row.label}</p>

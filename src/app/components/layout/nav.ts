@@ -5,13 +5,14 @@ export type PageKey = "dashboard" | "materials" | "performance" | "profile";
 
 export interface NavItem {
   key: PageKey;
-  label: string;
+  /** i18n key resolved with t() where the item is rendered */
+  labelKey: string;
   icon: LucideIcon;
 }
 
 export const navItems: NavItem[] = [
-  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { key: "materials", label: "Materials", icon: FolderOpen },
-  { key: "performance", label: "Performance", icon: TrendingUp },
-  { key: "profile", label: "Profile", icon: User },
+  { key: "dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard },
+  { key: "materials", labelKey: "nav.materials", icon: FolderOpen },
+  { key: "performance", labelKey: "nav.performance", icon: TrendingUp },
+  { key: "profile", labelKey: "nav.profile", icon: User },
 ];

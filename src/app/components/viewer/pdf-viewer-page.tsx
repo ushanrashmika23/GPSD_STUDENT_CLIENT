@@ -21,6 +21,8 @@ import { cardSurface } from "../shared/surface";
 import { cn } from "../ui/utils";
 import { toneFor } from "../../lib/accents";
 import { getMaterialFileBlobUrl } from "../../lib/api";
+import { formatLong } from "../../lib/format";
+import { useI18n } from "../../lib/i18n";
 import type { Material } from "../../lib/types";
 
 // pdf.js worker — bundled by Vite as an asset (pdfjs-dist 5.x ships the
@@ -41,6 +43,7 @@ export function PdfViewerPage({
   material: Material & { lesson_title?: string };
   onBack: () => void;
 }) {
+  const { t, lang } = useI18n();
   const [fileUrl, setFileUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -73,7 +76,7 @@ export function PdfViewerPage({
       setErr(
         error?.response?.data?.msg ??
           error?.message ??
-          "Could not load this document."
+          t("viewer.couldNotLoad")
       );
     } finally {
       setLoading(false);
@@ -154,7 +157,7 @@ export function PdfViewerPage({
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="outline" className="rounded-xl" onClick={onBack}>
           <ArrowLeft className="size-4" />
-          Back
+          {t("common.back")}
         </Button>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-[1.4rem] leading-tight tracking-tight">
@@ -162,11 +165,11 @@ export function PdfViewerPage({
           </h1>
           <p className="mt-0.5 flex items-center gap-2 text-sm text-muted-foreground">
             <span className={cn("rounded-md px-2 py-0.5 text-xs", tone.soft)}>
-              {material.lesson_title ?? "General"}
+              {material.lesson_title ?? t("common.general")}
             </span>
             <span className="inline-flex items-center gap-1 font-mono text-xs">
               <CalendarDays className="size-3.5" />
-              {formatLong(material.date_added)}
+              {formatLong(material.date_added, lang)}
             </span>
           </p>
         </div>
@@ -180,13 +183,13 @@ export function PdfViewerPage({
           ) : (
             <Download className="size-4" />
           )}
-          Download
+          {t("viewer.download")}
         </Button>
         <Button
           variant="outline"
           className="rounded-xl"
           onClick={fullscreen}
-          aria-label="Fullscreen"
+          aria-label={t("viewer.fullscreen")}
         >
           <Maximize2 className="size-4" />
         </Button>
@@ -197,7 +200,7 @@ export function PdfViewerPage({
         <div ref={frameRef} className={cn(cardSurface, "overflow-hidden")}>
           {/* Toolbar */}
           <div className="flex flex-wrap items-center gap-1.5 border-b border-border bg-muted/30 px-3 py-2">
-            <ToolBtn onClick={() => zoom(-0.1)} label="Zoom out">
+            <ToolBtn onClick={() => zoom(-0.1)} label={t("viewer.zoomOut")}>
               <ZoomOut className="size-4" />
             </ToolBtn>
             <button
@@ -205,17 +208,17 @@ export function PdfViewerPage({
                 setFitWidth(false);
                 setScale(1);
               }}
-              title="Reset zoom"
+              title={t("viewer.resetZoom")}
               className="min-w-14 rounded-md px-2 py-1.5 font-mono text-xs tabular-nums text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               {Math.round(effectiveScale * 100)}%
             </button>
-            <ToolBtn onClick={() => zoom(0.1)} label="Zoom in">
+            <ToolBtn onClick={() => zoom(0.1)} label={t("viewer.zoomIn")}>
               <ZoomIn className="size-4" />
             </ToolBtn>
             <ToolBtn
               onClick={() => setFitWidth((f) => !f)}
-              label="Fit width"
+              label={t("viewer.fitWidth")}
               active={fitWidth}
             >
               <MoveHorizontal className="size-4" />
@@ -224,7 +227,7 @@ export function PdfViewerPage({
             <div className="ml-auto flex items-center gap-1">
               <ToolBtn
                 onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
-                label="Previous page"
+                label={t("viewer.previousPage")}
                 disabled={pageNumber <= 1}
               >
                 <ChevronLeft className="size-4" />
@@ -234,7 +237,7 @@ export function PdfViewerPage({
               </span>
               <ToolBtn
                 onClick={() => setPageNumber((p) => Math.min(numPages || p, p + 1))}
-                label="Next page"
+                label={t("viewer.nextPage")}
                 disabled={!!numPages && pageNumber >= numPages}
               >
                 <ChevronRight className="size-4" />
@@ -247,14 +250,16 @@ export function PdfViewerPage({
             {loading ? (
               <div className="flex h-[70vh] flex-col items-center justify-center gap-3">
                 <Loader2 className="size-6 animate-spin text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Loading document…</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("viewer.loadingDocument")}
+                </p>
               </div>
             ) : err ? (
               <div className="flex h-[70vh] flex-col items-center justify-center gap-4 p-8 text-center">
                 <p className="text-sm text-destructive">{err}</p>
                 <Button variant="outline" className="rounded-xl" onClick={load}>
                   <RefreshCw className="size-4" />
-                  Try again
+                  {t("common.tryAgain")}
                 </Button>
               </div>
             ) : (
@@ -273,11 +278,11 @@ export function PdfViewerPage({
                   error={
                     <div className="flex flex-col items-center gap-4 py-16 text-center">
                       <p className="text-sm text-destructive">
-                        Could not render this document.
+                        {t("viewer.couldNotRender")}
                       </p>
                       <Button variant="outline" className="rounded-xl" onClick={load}>
                         <RefreshCw className="size-4" />
-                        Try again
+                        {t("common.tryAgain")}
                       </Button>
                     </div>
                   }
@@ -310,10 +315,15 @@ export function PdfViewerPage({
                 <FileText className="size-[18px]" />
               </div>
               <div>
-                <p className="text-sm tracking-tight">Document details</p>
+                <p className="text-sm tracking-tight">
+                  {t("viewer.documentDetails")}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  {material.lesson_title ?? "General"} · PDF
-                  {numPages > 0 ? ` · ${numPages} ${numPages === 1 ? "page" : "pages"}` : ""}
+                  {material.lesson_title ?? t("common.general")} ·{" "}
+                  {t("materialType.pdf")}
+                  {numPages > 0
+                    ? ` · ${t("viewer.page", { count: numPages })}`
+                    : ""}
                 </p>
               </div>
             </div>
@@ -322,9 +332,7 @@ export function PdfViewerPage({
             </p>
           </div>
           <p className="px-1 text-xs leading-relaxed text-muted-foreground">
-            Tip: use the <span className="font-mono">←</span> /{" "}
-            <span className="font-mono">→</span> keys to flip pages, and zoom or
-            fit the page with the toolbar.
+            {t("viewer.tip")}
           </p>
         </aside>
       </div>
@@ -361,11 +369,3 @@ function ToolBtn({
     </button>
   );
 }
-
-// e.g. 2026-03-12T00:00:00.000Z → "12 Mar 2026"
-const formatLong = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });

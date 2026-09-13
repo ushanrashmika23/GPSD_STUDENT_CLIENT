@@ -21,6 +21,8 @@ import { cardSurface, interactiveCard } from "../shared/surface";
 import { cn } from "../ui/utils";
 import { toneFor } from "../../lib/accents";
 import { getMaterialSignedUrl, getStudentMaterials } from "../../lib/api";
+import { formatLong } from "../../lib/format";
+import { useI18n } from "../../lib/i18n";
 import type { Material } from "../../lib/types";
 
 function fmt(sec: number) {
@@ -50,6 +52,9 @@ export function VideoPlayerPage({
   onBack: () => void;
   onOpenMaterial: (m: Material) => void;
 }) {
+  // `t` is already the playback clock in this component, so the translator is
+  // aliased to `tr`.
+  const { t: tr, lang } = useI18n();
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -86,7 +91,7 @@ export function VideoPlayerPage({
       setErr(
         error?.response?.data?.msg ??
           error?.message ??
-          "Could not load this recording."
+          tr("viewer.couldNotLoadRecording")
       );
     } finally {
       setLoading(false);
@@ -340,9 +345,9 @@ export function VideoPlayerPage({
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="outline" className="rounded-xl" onClick={onBack}>
           <ArrowLeft className="size-4" />
-          Back
+          {tr("common.back")}
         </Button>
-        <p className="text-sm text-muted-foreground">Now playing</p>
+        <p className="text-sm text-muted-foreground">{tr("viewer.nowPlaying")}</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -368,7 +373,7 @@ export function VideoPlayerPage({
                 <p className="px-6 text-center text-sm text-white/70">{err}</p>
                 <Button variant="outline" className="rounded-xl" onClick={load}>
                   <RefreshCw className="size-4" />
-                  Try again
+                  {tr("common.tryAgain")}
                 </Button>
               </div>
             )}
@@ -432,7 +437,7 @@ export function VideoPlayerPage({
               <button
                 onClick={togglePlay}
                 className="absolute inset-0 z-10 flex items-center justify-center bg-slate-950/40"
-                aria-label="Play"
+                aria-label={tr("viewer.play")}
               >
                 <motion.span
                   initial={{ scale: 0.8, opacity: 0 }}
@@ -447,7 +452,7 @@ export function VideoPlayerPage({
             {/* Lesson badge */}
             <span className="pointer-events-none absolute left-4 top-4 z-10 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs text-white backdrop-blur">
               <span className={cn("size-1.5 rounded-full", tone.solid)} />
-              {material.lesson_title ?? "Recording"}
+              {material.lesson_title ?? tr("materialType.recording")}
             </span>
 
             {/* Controls */}
@@ -502,7 +507,10 @@ export function VideoPlayerPage({
                   controlsShown ? "pointer-events-auto" : "pointer-events-none",
                 )}
               >
-                <button onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>
+                <button
+                  onClick={togglePlay}
+                  aria-label={playing ? tr("viewer.pause") : tr("viewer.play")}
+                >
                   {playing ? (
                     <Pause className="size-5 fill-white" />
                   ) : (
@@ -511,22 +519,29 @@ export function VideoPlayerPage({
                 </button>
                 <button
                   onClick={() => skip(-SKIP_SECONDS)}
-                  title={`Back ${SKIP_SECONDS}s`}
-                  aria-label={`Back ${SKIP_SECONDS} seconds`}
+                  title={tr("viewer.backSeconds", { seconds: SKIP_SECONDS })}
+                  aria-label={tr("viewer.backSecondsLabel", {
+                    seconds: SKIP_SECONDS,
+                  })}
                 >
                   <SkipBack className="size-[18px] opacity-90" />
                 </button>
                 <button
                   onClick={() => skip(SKIP_SECONDS)}
-                  title={`Forward ${SKIP_SECONDS}s`}
-                  aria-label={`Forward ${SKIP_SECONDS} seconds`}
+                  title={tr("viewer.forwardSeconds", { seconds: SKIP_SECONDS })}
+                  aria-label={tr("viewer.forwardSecondsLabel", {
+                    seconds: SKIP_SECONDS,
+                  })}
                 >
                   <SkipForward className="size-[18px] opacity-90" />
                 </button>
 
                 {/* Volume: hover reveals a slider */}
                 <div className="group/vol flex items-center">
-                  <button onClick={toggleMute} aria-label={muted ? "Unmute" : "Mute"}>
+                  <button
+                    onClick={toggleMute}
+                    aria-label={muted ? tr("viewer.unmute") : tr("viewer.mute")}
+                  >
                     {muted || volume === 0 ? (
                       <VolumeX className="size-[18px] opacity-90" />
                     ) : (
@@ -551,7 +566,7 @@ export function VideoPlayerPage({
                         setVolume(val);
                         wake();
                       }}
-                      aria-label="Volume"
+                      aria-label={tr("viewer.volume")}
                       className="w-20 accent-primary"
                     />
                   </div>
@@ -564,8 +579,8 @@ export function VideoPlayerPage({
                 <div className="ml-auto flex items-center gap-3">
                   <button
                     onClick={togglePip}
-                    title="Picture in picture"
-                    aria-label="Picture in picture"
+                    title={tr("viewer.pictureInPicture")}
+                    aria-label={tr("viewer.pictureInPicture")}
                     className="hidden sm:block"
                   >
                     <PictureInPicture2 className="size-[18px] opacity-90" />
@@ -575,8 +590,8 @@ export function VideoPlayerPage({
                   <div className="relative" ref={speedRef}>
                     <button
                       onClick={() => setSpeedOpen((o) => !o)}
-                      title="Playback speed"
-                      aria-label="Playback speed"
+                      title={tr("viewer.playbackSpeed")}
+                      aria-label={tr("viewer.playbackSpeed")}
                       className={cn(
                         "min-w-9 rounded-md px-1.5 py-1 font-mono text-xs tabular-nums transition-colors",
                         speedOpen || speed !== 1
@@ -604,7 +619,10 @@ export function VideoPlayerPage({
                     )}
                   </div>
 
-                  <button onClick={fullscreen} aria-label="Fullscreen">
+                  <button
+                    onClick={fullscreen}
+                    aria-label={tr("viewer.fullscreen")}
+                  >
                     <Maximize2 className="size-[18px] opacity-90" />
                   </button>
                 </div>
@@ -619,11 +637,11 @@ export function VideoPlayerPage({
             </h1>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <span className={cn("rounded-md px-2 py-0.5 text-xs", tone.soft)}>
-                {material.lesson_title ?? "Recording"}
+                {material.lesson_title ?? tr("materialType.recording")}
               </span>
               <span className="inline-flex items-center gap-1 font-mono text-xs">
                 <CalendarDays className="size-3.5" />
-                {formatLong(material.date_added)}
+                {formatLong(material.date_added, lang)}
               </span>
               {duration > 0 && (
                 <span className="font-mono text-xs">· {fmt(duration)}</span>
@@ -637,10 +655,10 @@ export function VideoPlayerPage({
 
         {/* Up next */}
         <aside className="space-y-3">
-          <h2 className="text-lg tracking-tight">Up next</h2>
+          <h2 className="text-lg tracking-tight">{tr("viewer.upNext")}</h2>
           {upNext.length === 0 && (
             <p className="text-sm text-muted-foreground">
-              No other recordings shared with your class yet.
+              {tr("viewer.noOtherRecordings")}
             </p>
           )}
           {upNext.map((m) => {
@@ -666,7 +684,7 @@ export function VideoPlayerPage({
                     {m.material_name}
                   </p>
                   <span className={cn("mt-1.5 inline-block rounded px-1.5 py-0.5 text-[0.7rem]", t2.soft)}>
-                    {m.lesson_title ?? "Recording"}
+                    {m.lesson_title ?? tr("materialType.recording")}
                   </span>
                 </div>
               </button>
@@ -677,11 +695,3 @@ export function VideoPlayerPage({
     </div>
   );
 }
-
-// e.g. 2026-03-12T00:00:00.000Z → "12 Mar 2026"
-const formatLong = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });

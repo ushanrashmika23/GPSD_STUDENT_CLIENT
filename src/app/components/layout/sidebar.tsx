@@ -3,7 +3,9 @@ import { motion } from "motion/react";
 import { LogOut, PanelLeftClose, PanelLeftOpen, Sigma } from "lucide-react";
 import { cn } from "../ui/utils";
 import { navItems, type PageKey } from "./nav";
+import { LanguageSwitcher } from "../shared/language-switcher";
 import { getStudentProfile, type StudentProfile } from "../../lib/api";
+import { useI18n } from "../../lib/i18n";
 
 // The logged-in user stored at login (names/email…) — read synchronously so the
 // sidebar fills instantly; the profile API adds the call-up number afterwards.
@@ -33,6 +35,7 @@ export function Sidebar({
   collapsed: boolean;
   onToggleCollapse: () => void;
 }) {
+  const { t } = useI18n();
   const stored = storedUser();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
 
@@ -43,7 +46,8 @@ export function Sidebar({
       .catch((e) => console.error("Sidebar profile fetch failed:", e));
   }, []);
 
-  const firstName = stored?.first_name ?? profile?.user.first_name ?? "Student";
+  const firstName =
+    stored?.first_name ?? profile?.user.first_name ?? t("common.student");
   const lastName = stored?.last_name ?? profile?.user.last_name ?? "";
   const email = stored?.email ?? profile?.user.email ?? "";
   // Call-up number once the profile resolves; email as the instant fallback
@@ -71,14 +75,16 @@ export function Sidebar({
               <p className="font-display tracking-tight text-foreground">
                 AxiomMaths
               </p>
-              <p className="text-xs text-muted-foreground">Combined Maths</p>
+              <p className="text-xs text-muted-foreground">
+                {t("sidebar.tagline")}
+              </p>
             </div>
           )}
         </div>
         {!collapsed && (
           <button
             onClick={onToggleCollapse}
-            aria-label="Collapse sidebar"
+            aria-label={t("sidebar.collapse")}
             className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             <PanelLeftClose className="size-[18px]" />
@@ -89,7 +95,7 @@ export function Sidebar({
       {collapsed && (
         <button
           onClick={onToggleCollapse}
-          aria-label="Expand sidebar"
+          aria-label={t("sidebar.expand")}
           className="mx-auto mt-4 flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
         >
           <PanelLeftOpen className="size-[18px]" />
@@ -100,11 +106,12 @@ export function Sidebar({
       <nav className="mt-6 flex flex-col gap-1 px-3">
         {navItems.map((item) => {
           const isActive = active === item.key;
+          const label = t(item.labelKey);
           return (
             <button
               key={item.key}
               onClick={() => onNavigate(item.key)}
-              title={collapsed ? item.label : undefined}
+              title={collapsed ? label : undefined}
               className={cn(
                 "group relative flex items-center gap-3 rounded-xl py-2.5 text-sm transition-colors",
                 collapsed ? "justify-center px-0" : "px-3",
@@ -124,7 +131,7 @@ export function Sidebar({
                 className="relative z-10 size-[18px] shrink-0"
                 strokeWidth={isActive ? 2.3 : 2}
               />
-              {!collapsed && <span className="relative z-10">{item.label}</span>}
+              {!collapsed && <span className="relative z-10">{label}</span>}
             </button>
           );
         })}
@@ -132,6 +139,9 @@ export function Sidebar({
 
       {/* Footer / user — real details from the login + profile API */}
       <div className="mt-auto px-3">
+        {/* Language selector — sits above the log-out row */}
+        <LanguageSwitcher variant="sidebar" collapsed={collapsed} />
+
         <div
           className={cn(
             "flex items-center gap-3 rounded-xl border border-border bg-background/60 py-2.5",
@@ -154,7 +164,8 @@ export function Sidebar({
               </div>
               <button
                 onClick={onLogout}
-                aria-label="Log out"
+                aria-label={t("common.logOut")}
+                title={t("common.logOut")}
                 className="ml-auto flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-destructive"
               >
                 <LogOut className="size-4" />

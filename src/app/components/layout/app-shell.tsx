@@ -3,6 +3,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { Bell, Sigma } from "lucide-react";
 import { Sidebar } from "./sidebar";
 import { BottomNav } from "./bottom-nav";
+import { LanguageSwitcher } from "../shared/language-switcher";
+import { useI18n } from "../../lib/i18n";
 import type { PageKey } from "./nav";
 
 export function AppShell({
@@ -18,6 +20,7 @@ export function AppShell({
   onLogout: () => void;
   children: ReactNode;
 }) {
+  const { t } = useI18n();
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -38,13 +41,18 @@ export function AppShell({
           </div>
           <span className="font-display tracking-tight">ComMaths</span>
         </div>
-        <button
-          aria-label="Notifications"
-          className="relative flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary"
-        >
-          <Bell className="size-[18px]" />
-          <span className="absolute right-2 top-2 size-1.5 rounded-full bg-primary" />
-        </button>
+        <div className="flex items-center gap-1">
+          {/* Language selector — beside the notification bell */}
+          <LanguageSwitcher variant="compact" />
+
+          <button
+            aria-label={t("header.notifications")}
+            className="relative flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary"
+          >
+            <Bell className="size-[18px]" />
+            <span className="absolute right-2 top-2 size-1.5 rounded-full bg-primary" />
+          </button>
+        </div>
       </header>
 
       <main
